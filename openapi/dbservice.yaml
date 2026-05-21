@@ -1312,6 +1312,7 @@ components:
 
         columns:
           type: array
+          description: Column definitions for the table. Expand for field details.
           items:
             $ref: '#/components/schemas/TableColumnSpec'
         primaryKeys:
@@ -1371,7 +1372,12 @@ components:
           example: sym
         type:
           type: string
-          description: The type of the column (for example `symbol`, `timestamp`, `float`, `long`).
+          description: |
+            Any of the base [datatypes](https://code.kx.com/kdb-x/ref/datatypes.html) supported in KDB-X: `boolean`, `guid`, `byte`, `short`, `int`, `long`, `real`, `float`, `char`, `symbol`, `timestamp`, `month`, `date`, `datetime` (note, this is a deprecated q type), `timespan`, `minute`, `second`, or `time`.
+
+            Vectors of the basic types are supported by supplying the plural of the base type name, except for `char` whose equivalent is `string`. For example: `ints` for a vector of `int`, `floats` for a vector of `float`, etc.
+
+            Mixed types (KDB-X types of `0h`) are also supported by supplying an empty type, i.e. `"type": ""`. **NOTE** that due to the way KDB-X handles lists, inserting a non-list value as the first value of a table will corrupt the schema - ensure all values inserted into the column are lists.
           example: symbol
         description:
           type: string
@@ -1830,7 +1836,7 @@ components:
           - ask
         types:
           type: string
-          description: Optional type string in CSV parse format (uppercase), e.g. F=float, J=long, P=timestamp, S=symbol, *=string. See https://code.kx.com/q/ref/tok/ for full details.
+          description: Optional type string in CSV parse format (uppercase), e.g. `F`=float, `J`=long, `P`=timestamp, `S`=symbol, `*`=string. See https://code.kx.com/q/ref/tok/ for full details.
           example: SPFF
         postparse:
           type: object
@@ -1842,15 +1848,17 @@ components:
 
             Existing columns can be modified, and new ones created. 
             
-            Columns from the file are available for use in the expression via a `data` dictionary variable, and the file name is available via a `path` string variable.
-
-            For example: {'timestamp': 'data[&#96;date]+data[&#96;time]'}.
-
+            Columns from the file are available for use in the expression via a `data` dictionary variable, and the file name is available via a `path` string variable. For example: 
+            
+            ``{'timestamp': 'data[`date]+data[`time]'}``
+            
             Runs after loading and parsing (including typecasting) of data in the file is done.
 
             Note that columns used as inputs in the transform are by default not included after use, therefore must be re-added if they are required. 
             
-            For example, to preserve the date column in the above, the `postparse` dictionary should be: {'timestamp': 'data[&#96;date]+data[&#96;time]', 'date': 'data[`date]'}
+            For example, to preserve the date column in the above, the `postparse` dictionary should be:
+
+            ``{'timestamp':'data[`date]+data[`time]','date':'data[`date]'}``
 
         headerRowIndex:
           type: integer

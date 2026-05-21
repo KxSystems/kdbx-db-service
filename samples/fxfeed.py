@@ -1,6 +1,7 @@
 from rtpy import rt_helper
 from datetime import datetime, timezone
 from random import random, choice
+import pykx as kx
 import time
 import os
 
@@ -24,5 +25,5 @@ while True:
                   'bid': round(newmid-spread/2,dec+1),
                   'ask': round(newmid+spread/2,dec+1)}]
         symlist[sym][0] = newmid
-        rt_helper.insert(h, 'fxquote', price)
+        rt_helper.insert(h, 'fxquote', kx.toq(price, strings_as_char=True))
     time.sleep(1)

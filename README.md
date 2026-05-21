@@ -10,7 +10,7 @@ Full documentation available at [code.kx](https://code.kx.com/kdb-x/services/db-
 
 Before starting the DB Service, you must have your local environment ready. Ensure the following:
 
-- **License**. You have a valid [KDB-X license](https://code.kx.com/kdb-x/get_started/kdb-x-install.html#license-requirements). Set in the `.env` file. If it is a community edition license it should be assigned to `KDB_LICENSE_B64`. For a k4 license, use `KDB_K4LICENSE_B64`.
+- **License**. You have a valid [KDB-X license](https://code.kx.com/kdb-x/get_started/kdb-x-install.html#license-requirements). Set in the `.env` file. If it is a Community Edition license it should be assigned to `KDB_LICENSE_B64`. For a k4 license, use `KDB_K4LICENSE_B64`. *NOTE: if you're using a Community Edition license from before May 2026, you'll need to generate a new one to use the DB Service. You can get a new automatically-generated license by visiting the [KDB-X Install page](https://developer.kx.com/products/kdb-x/install).*
 
 - **Docker**, with `docker compose` available. Refer to the [Docker installation](https://docs.docker.com/get-started/get-docker/) guide and the [`docker compose` installation](https://docs.docker.com/compose/install/) instructions.
 
@@ -38,13 +38,19 @@ BEARER=BEARERTOKEN
 docker login -u $EMAIL -p $BEARER portal.dl.kx.com
 ```
 
-3. Run the initialization script - this command initializes the database directories, and copies sample data to the import path:
+3. Add your license to the `.env` file (see note above):
+
+```bash
+export KDB_LICENSE_B64=LICENSE
+```
+
+4. Run the initialization script - this command initializes the database directories, and copies sample data to the import path:
 
 ```bash
 ./init-db.sh
 ```
 
-4. Start the service:
+5. Start the service:
 
 ```bash
 docker compose up -d
