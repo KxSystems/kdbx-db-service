@@ -1,0 +1,49 @@
+# Minimum values overrides for the db-service-api chart.
+.common_values: &common_values
+  imagePullSecrets:
+    - name: kx-pull-secret
+
+  # -- You must set your license name. Default is `"kc.lic"`.
+  # Available types are:
+  #  - kc.lic
+  #  - k4.lic
+  #  - kx.lic
+  kxLicenseName: "k4.lic"
+
+gw:
+  <<: *common_values
+
+  dbsRc:
+    service:
+      port: 5050
+    allowedSbxApis: .query.q,.query.sql
+    envs:
+      - name: KXI_ALLOW_PARTIAL_LABELS
+        value: "true"
+      - name: QLIC
+        value: /opt/kx/lic
+      - name: KXI_LOG_FORMAT
+        value: text
+      - name: KXI_LOG_LEVELS
+        value: default:trace
+
+  dbsAgg:
+    envs:
+      - name: QLIC
+        value: /opt/kx/lic
+
+  dbsSg:
+    smAddrs:
+      - name: equities_nasdaq
+        addr: db-service-db-equities-nasdaq-db-sm:20001
+      - name: equities_nyse
+        addr: db-service-db-equities-nyse-db-sm:20001
+      - name: fx_emea
+        addr: db-service-db-fx-emea-db-sm:20001
+      - name: fx_americas
+        addr: db-service-db-fx-americas-db-sm:20001
+    envs:
+      - name: QLIC
+        value: /opt/kx/lic
+      - name: KXI_SCOPE_AFFINITY
+        value: soft

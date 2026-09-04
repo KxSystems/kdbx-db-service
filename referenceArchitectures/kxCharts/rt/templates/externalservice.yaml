@@ -1,0 +1,45 @@
+{{- if .Values.externalService.enabled -}}
+{{- range $i, $e := until ( .Values.replicaCount | int ) }}
+{{- $targetPod := printf "%s-%d" ( include "rt.fullname" $ ) $i }}
+{{- $svcName := printf "%s-e-%d" ( include "rt.fullname" $ ) $i }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $svcName }}
+  labels:
+    insights.kx.com/rtservice: "external"
+    statefulset.kubernetes.io/pod-name: {{ $targetPod }}
+    {{- include "rt.labels" $ | nindent 4 }}
+  {{- with $.Values.externalService.annotations }}
+  annotations:
+    {{- tpl ( toYaml . ) $ | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ $.Values.externalService.type }}
+  {{- with $.Values.externalService.loadBalancerIPs }}
+  {{- if lt $i ( . | len ) }}
+  loadBalancerIP: {{ index . $i }}
+  {{- end }}
+  {{- end }}
+  ports:
+    {{- if $.Values.externalService.useSsl }}
+    - name: tcp-ext
+      port: 5000
+      targetPort: topic
+    - name: tcp-ext-sub
+      port: 5006
+      targetPort: tcp-ext-sub
+    {{- else }}
+    - name: tcp-ext
+      port: 5000
+      targetPort: push
+    - name: tcp-ext-sub
+      port: 5006
+      targetPort: tcp-subserver
+    {{- end }}
+  selector:
+    statefulset.kubernetes.io/pod-name: {{ $targetPod }}
+    {{- include "rt.selectorLabels" $ | nindent 4 }}
+{{- end }}
+{{- end }}

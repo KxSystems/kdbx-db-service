@@ -1,0 +1,276 @@
+# Default values for rt.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# -- This sets the `replicaSet` count.
+# More information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#replicas-and-scaling
+replicaCount: 3
+
+# -- Default image repository and pull settings for DB Service RT chart components.
+# Refer to Images https://kubernetes.io/docs/concepts/containers/images/
+# @default -- `{}`
+image:
+  # -- Image repository.
+  # @default -- `"portal.dl.kx.com/"`
+  repository: "portal.dl.kx.com"
+  # component: "kxi-rt"
+
+  # -- Image pull policy.
+  # Refer to Image Pull Policy https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy
+  pullPolicy: "IfNotPresent"
+
+# -- Image pull secrets to be applied to all pods within the chart.
+# For pulling an image from a private repository.
+# Refer to Image Pull Secrets https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+# @default -- `[]`
+imagePullSecrets: []
+
+# -- Can provide any valid `q` runtime argument here.
+# Full details here: https://code.kx.com/q/basics/cmdline/
+# Additionally RT archival configuration can be provided here.
+# See the DB Service documentation for more information.
+args:
+  - "-time"
+  - "10080"
+  - "-disk"
+  - "90"
+
+# -- Additional ENVs can be added and these overridden in custom values files.
+# See the DB Service documentation for RT configuration options.
+envs:
+  - name: RT_LOGLEVEL_CONSOLE
+    value: "INFO"
+  - name: RT_QURAFT_LOG_LEVEL
+    value: "INFO"
+  - name: RT_LOG_LEADER
+    value: "1"
+
+# -- Provisions the Kubernetes Service required to expose the workloads.
+# More information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
+# @default -- `{}`
+service:
+  # -- Sets the Service type.
+  # Refer to Service Types https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
+  type: "ClusterIP"
+
+  # -- This sets the service annotations for the Internal RT Service.
+  # Dictionary of key-value pairs.
+  # Refer to Object Annotations https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+  # @default -- `{}`
+  annotations: {}
+
+# -- This is for setting up a additional external services.
+# Setting type to `LoadBalancer` and enabling will expose endpoints external to cluster.
+# More information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
+# @default -- `{}`
+externalService:
+  # -- By default external services are disabled
+  enabled: false
+
+  # -- Set to true if you plan to add certification and utilize TCP for data publication.
+  useSsl: false
+
+  # -- This sets the Service type.
+  # Setting the type field to `LoadBalancer` provisions a load balancer for your Service.
+  # The actual creation of the load balancer happens asynchronously, and information about the provisioned balancer is published in the Service's `.status.loadBalancer`.
+  # More information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
+  type: "LoadBalancer"
+
+  # -- This sets the service annotations for the External RT Service.
+  # Dictionary of key-value pairs.
+  # Refer to Object Annotations https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+  # @default -- `{}`
+  annotations: {}
+
+  # -- This allows you to specify your LoadBalancer's external IP address
+  # Should specify one per replica. e.g. `replicaCount: 3`, three IPs should be listed.
+  # More information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#loadbalancer
+  # @default -- `{}`
+  loadBalancerIPs: {}
+
+# -- You must set your license name.
+# Available types are:
+#  - `"kc.lic"`
+#  - `"k4.lic"`
+#  - `"kx.lic"`
+kxLicenseName: "kc.lic"
+
+# Configure persistence within chart.
+# @default -- `{}`
+persistence:
+  # -- Specifies the storage capacity request for the Persistent Volume Claim.
+  capacity: "2Gi"
+
+  # -- Persistent Volume Claim StorageClass.
+  # More information can be found here: https://kubernetes.io/docs/concepts/storage/storage-classes/
+  storageClass: ""
+
+  # -- Persistent Volume Claim Access Modes.
+  # More information can be found here: https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes
+  accessModes:
+    - "ReadWriteOnce"
+
+# -- Configuration for RT Raft.
+raft:
+  chunkSize: 0.25
+  logSize: 2
+  internalTimer: 10
+  heartbeat: 1000
+
+# -- Configure `ServiceAccount` to be used within chart.
+# Refer to Service Accounts https://kubernetes.io/docs/concepts/security/service-accounts/
+# @default -- `{}`
+serviceAccount:
+  # -- Specifies whether a Service Account should be created.
+  create: true
+
+  # -- Automatically mount a Service Account's API credentials.
+  autoMount: true
+
+  # -- Custom annotations to add to the Service Account.
+  # Dictionary of key-value pairs.
+  # Refer to Object Annotations https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+  # @default -- `{}`
+  annotations: {}
+
+  # -- The name of the Service Account to use.
+  # If not set and create is `true`, a name is generated using the fullname template.
+  name: ""
+
+# -- Custom annotations to be applied to Pod resources.
+# Dictionary of key-value pairs.
+# Refer to Object Annotations https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+# @default -- `{}`
+podAnnotations: {}
+
+# -- Custom labels to be applied to Pod resources.
+# Dictionary of key-value pairs.
+# Refer to Object Labels https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+# @default -- `{}`
+podLabels: {}
+
+# -- Default Pod Security Context for Reliable Transport chart components.
+# Refer to Pod Security Context https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+# @default -- `{}`
+podSecurityContext:
+  fsGroup: 65534
+  runAsUser: 65534
+  runAsNonRoot: true
+
+# -- Default security context for Reliable Transport chart components.
+# Refer to Security Context https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
+# @default -- `{}`
+securityContext:
+  readOnlyRootFilesystem: false
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+# -- Reliable Transport Kubernetes resources.
+# Refer to Container Resources https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # requests:
+  #   memory: "1Gi"
+  #   cpu: "1000m"
+  # limits:
+  #   memory: "1Gi"
+  #   cpu: "1000m"
+
+# -- Configure Liveness Probe for chart.
+# Refer to Configure Probes https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+# @default -- `{}`
+livenessProbe:
+  # -- Defines a probe of type `"httpGet"`.
+  # @default -- `{}`
+  httpGet:
+    # -- Path to access on the HTTP server.
+    path: "/readiness"
+
+    # -- Name or number of the port to access on the container.
+    port: 6000
+
+  # -- How often (in seconds) to perform the probe.
+  periodSeconds: 10
+
+  # -- Minimum consecutive successes for the probe to be considered
+  # successful after having failed.
+  successThreshold: 1
+
+  # -- Number of seconds after the container has started before liveness
+  # probes are initiated.
+  initialDelaySeconds: 60
+
+# -- Configure Readiness Probe for chart.
+# Refer to Configure Probes https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+# @default -- `{}`
+readinessProbe:
+  # -- Defines a probe of type `"httpGet"`.
+  # @default -- `{}`
+  httpGet:
+    # -- Path to access on the HTTP server.
+    path: "/readiness"
+
+    # -- Name or number of the port to access on the container.
+    port: 6000
+
+  # -- How often (in seconds) to perform the probe.
+  periodSeconds: 2
+
+  # -- Minimum consecutive successes for the probe to be considered
+  # successful after having failed.
+  successThreshold: 2
+
+  # -- Number of seconds after which the probe times out.
+  timeoutSeconds: 5
+
+# -- Additional volumes on the output Deployment definition.
+# Refer to Volumes https://kubernetes.io/docs/concepts/storage/volumes/
+# @default -- `[]`
+volumes: []
+
+# -- Additional volumeMounts on the output Deployment definition.
+# Refer to Volumes https://kubernetes.io/docs/concepts/storage/volumes/
+# @default -- `[]`
+volumeMounts: []
+
+# -- Allows adding node selector constraints to the Reliable Transport.
+# This constrains the pods to run only on nodes that match the specified labels.
+# Dictionary of key-value pairs.
+# Refer to NodeSelector https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector
+nodeSelector: {}
+
+# -- Allows adding tolerations to the Reliable Transport.
+# This allows the pods to be scheduled on nodes with matching taints.
+# Refer to Taint and Tolerations https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/
+# @default -- `[]`
+tolerations: []
+
+# -- This is for adding affinities to the Reliable Transport.
+# Refer to Pod Affinity https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
+# @default -- `{}`
+affinity: {}
+
+# -- Default Sidecar configuration for Reliable Transport chart components
+# @default -- `{}`
+dbsSidecar:
+  # -- This sets overriding container image information. Use if you wish to target specific versions of the dbsSidecar.
+  # More information can be found here: https://kubernetes.io/docs/concepts/containers/images/
+  # @default -- `{}`
+  image:
+    # -- Image tag.
+    tag: "1.18.1"
+
+# -- Define how pods are created/deleted.
+# `OrderedReady`, sequential; `Parallel`, all at once.
+# Refer to Pod Management https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#pod-management-policies
+podManagementPolicy: "Parallel"
+
+# -- Define how pod updates are applied.
+# `RollingUpdate`, replace gradually; `OnDelete`, replace only on delete.
+# More information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies
+updateStrategy: {}

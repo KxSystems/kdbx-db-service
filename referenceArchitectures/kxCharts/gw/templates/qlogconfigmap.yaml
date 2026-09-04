@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "gw.fullname" . }}-log
+  labels:
+    {{- include "gw.cm.labels" . | nindent 4 }}
+data:
+  qlog.json: |-
+    {
+      "endpoints": [
+        "fd://stdout"
+      ],
+      "formatMode": "json",
+      "routings": {
+        "DEFAULT": "INFO"
+      }
+    }

@@ -1,0 +1,18 @@
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "db.fullname" . }}-dalog
+  labels:
+    {{- include "db.da.labels" . | nindent 4 }}
+data:
+  qlog.json: |-
+    {
+      "endpoints": [
+        "fd://stdout"
+      ],
+      "formatMode": "json",
+      "routings": {
+        "DEFAULT": "INFO"
+      }
+    }

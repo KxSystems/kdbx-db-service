@@ -1,0 +1,12 @@
+# Custom DB Service shard values for the Americas FX shard.
+db:
+  assembly:
+    filename: db-service-db-fx-assembly.yaml
+    name: fx_americas
+
+  stream:
+    prefix: "rt-"
+    name: "db-service-db-fx-americas"
+
+  labels:
+    region: "americas"

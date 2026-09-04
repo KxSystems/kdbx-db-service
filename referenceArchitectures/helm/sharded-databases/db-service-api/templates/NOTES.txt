@@ -1,0 +1,4 @@
+Installed DB Service sharded databases - gateway access chart
+================================
+
+You have installed the common DB Service gateway chart used to route API and query requests across the deployed database shards.

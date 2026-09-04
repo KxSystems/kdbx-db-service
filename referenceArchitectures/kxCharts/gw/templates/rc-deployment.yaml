@@ -1,0 +1,144 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "gw.fullname" . }}-rc
+  labels:
+    {{- include "gw.rc.labels" . | nindent 4 }}
+    app: {{ include "gw.fullname" . }}-rc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "gw.rc.selectorLabels" . | nindent 6 }}
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        checksum/log: {{ include ( print $.Template.BasePath "/qlogconfigmap.yaml" ) . | sha256sum }}
+        checksum/config: {{ include ( print $.Template.BasePath "/rc-sidecarconfigmap.yaml" ) . | sha256sum }}
+        {{- with .Values.dbsRc.podAnnotations }}
+        {{- tpl ( toYaml . ) $ | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "gw.rc.labels" . | nindent 8 }}
+        {{- with .Values.dbsRc.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        app: {{ include "gw.fullname" . }}-rc
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: rc
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          image: "{{ .Values.image.repository }}/kxi-sg-rc:{{ .Values.dbsRc.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- with .Values.dbsRc.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.dbsRc.args }}
+          args:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          ports:
+            - containerPort: {{ .Values.dbsRc.service.port }}
+              protocol: TCP
+          env:
+            - name: KXI_CONFIG_FILE
+              value: "/opt/kx/sidecarConfig/config.json"
+            - name: KXI_NAME
+              value: sg_rc
+            - name: KXI_PORT
+              value: {{ .Values.dbsRc.service.port | quote }}
+            - name: KXI_ALLOWED_SBX_APIS
+              value: {{ .Values.dbsRc.allowedSbxApis | quote }}
+            - name: KXI_LOG_CONFIG
+              value: /opt/kx/config/qlog.json
+            {{- with .Values.dbsRc.envs }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          volumeMounts:
+            {{- with .Values.dbsRc.volumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+            - name: tmp
+              mountPath: "/tmp"
+              readOnly: false
+            - name: {{ include "gw.fullname" . }}-rc-sidecar
+              mountPath: /opt/kx/sidecarConfig/
+            - name: {{ include "gw.fullname" . }}-log
+              mountPath: /opt/kx/config
+            - name: db-service-kx-license
+              mountPath: /opt/kx/lic
+              readOnly: true
+        - name: sidecar
+          image: "{{ .Values.image.repository }}/kxi-sidecar:{{ .Values.dbsSidecar.image.tag | default .Chart.AppVersion }}"
+          args: ["-p", "8080" ]
+          ports:
+            - containerPort: 8080
+              name: metrics
+          env:
+            - name: KXI_CONFIG_FILE
+              value: "/opt/kx/sidecarConfig/config.json"
+            - name: KXI_LOG_CONFIG
+              value: /opt/kx/config/qlog.json
+          volumeMounts:
+            - name: tmp-sidecar
+              mountPath: "/tmp"
+              readOnly: false
+            - name: {{ include "gw.fullname" . }}-rc-sidecar
+              mountPath: /opt/kx/sidecarConfig/
+            - name: {{ include "gw.fullname" . }}-log
+              mountPath: /opt/kx/config
+            - name: db-service-kx-license
+              mountPath: /opt/kx/lic
+              readOnly: true
+      restartPolicy: Always
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 100Mi
+        - name: tmp-sidecar
+          emptyDir:
+            sizeLimit: 100Mi
+        - name: db-service-kx-license
+          secret:
+            defaultMode: 420
+            items:
+              - key: license
+                path: {{ .Values.kxLicenseName }}
+            optional: false
+            secretName: kx-license
+        {{- with .Values.dbsRc.volumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        - name: {{ include "gw.fullname" . }}-rc-sidecar
+          configMap:
+            name: {{ include "gw.fullname" . }}-rc-sidecar
+        - name: {{ include "gw.fullname" . }}-log
+          configMap:
+            name: {{ include "gw.fullname" . }}-log
+
+      {{- with .Values.dbsRc.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.dbsRc.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.dbsRc.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

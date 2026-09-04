@@ -1,0 +1,26 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "gw.fullname" . }}-sg
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "services"]
+    verbs: ["get", "watch", "list"]
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{ include "gw.fullname" . }}-sg
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "gw.fullname" . }}-sg
+    apiGroup: ""
+roleRef:
+  kind: Role
+  name: {{ include "gw.fullname" . }}-sg
+  apiGroup: ""
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "gw.fullname" . }}-sg

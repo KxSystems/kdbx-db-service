@@ -1,0 +1,222 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "rt.fullname" . }}
+  labels:
+    {{- include "rt.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "rt.fullname" . }}
+  replicas: {{ .Values.replicaCount }}
+  podManagementPolicy: {{ .Values.podManagementPolicy }}
+  {{- with .Values.updateStrategy }}
+  updateStrategy:
+    {{- tpl ( toYaml . ) $ | nindent 4 }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "rt.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/log: {{ include ( print $.Template.BasePath "/qlogconfigmap.yaml" ) . | sha256sum }}
+        checksum/config: {{ include ( print $.Template.BasePath "/sidecarconfigmap.yaml" ) . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- tpl ( toYaml . ) $ | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "rt.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- tpl ( toYaml . ) $ | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- tpl ( toYaml . ) $ | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "rt.serviceAccountName" . }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- tpl ( toYaml . ) $ | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- tpl ( toYaml . ) $ | nindent 12 }}
+          {{- end }}
+          image: "{{ .Values.image.repository }}/{{ .Values.image.component | default "kxi-rt" }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - "-size"
+            - "{{ .Values.replicaCount }}"
+            - "-in"
+            - "/s/in"
+            - "-out"
+            - "/s/out"
+            - "-cp"
+            - "/s/state"
+            {{- with .Values.args }}
+            {{- tpl ( toYaml . ) $ | nindent 12 }}
+            {{- end }}
+          ports:
+            - containerPort: 4000
+              name: tcp-seq
+              protocol: TCP
+            - containerPort: 5000
+              name: topic
+              protocol: TCP
+            - containerPort: 5001
+              name: pull
+              protocol: TCP
+            - containerPort: 5002
+              name: push
+              protocol: TCP
+            - containerPort: 5003
+              name: tcp-subserver
+              protocol: TCP
+            - containerPort: 7000
+              name: udp-raft
+              protocol: UDP
+            - containerPort: 7100
+              name: tcp-raft
+              protocol: TCP
+            - containerPort: 9000
+              name: udp-watch
+              protocol: UDP
+            - containerPort: 8000
+              name: udp-seq
+              protocol: UDP
+            - containerPort: 5009
+              name: xsync
+              protocol: TCP
+            - containerPort: 6000
+              name: tcp-rest
+              protocol: TCP
+            - containerPort: 6001
+              name: tcp-sup
+              protocol: TCP
+            - containerPort: 5006
+              name: tcp-ext-sub
+              protocol: TCP
+          env:
+            - name: KXI_CONFIG_FILE
+              value: "/opt/kx/sidecarConfig/config.json"
+            - name: KXI_LOG_CONFIG
+              value: /opt/kx/config/qlog.json
+            - name: RT_TOPIC_PREFIX
+              value: "{{ include "rt.resourcePrefix" . }}"
+            - name: RT_EXTERN_PREFIX
+              value: "{{ include "rt.resourcePrefix" . }}"
+            - name: RT_SINK
+              value: "{{ include "rt.streamName" . }}"
+            - name: RT_REPLICAS
+              value: "{{ .Values.replicaCount }}"
+            - name: RAFT_CHUNK_SIZE
+              value: "{{ .Values.raft.chunkSize }}"
+            - name: RAFT_LOG_SIZE
+              value: "{{ .Values.raft.logSize }}"
+            - name: RAFT_INTERNAL_TIMER
+              value: "{{ .Values.raft.internalTimer }}"
+            - name: RAFT_HEARTBEAT
+              value: "{{ .Values.raft.heartbeat }}"
+            {{- with .Values.envs }}
+            {{- tpl ( toYaml . ) $ | nindent 12 }}
+            {{- end }}
+          {{- with .Values.livenessProbe }}
+          livenessProbe:
+            {{- tpl ( toYaml . ) $ | nindent 12 }}
+          {{- end }}
+          {{- with .Values.readinessProbe }}
+          readinessProbe:
+            {{- tpl ( toYaml . ) $ | nindent 12 }}
+          {{- end }}
+          {{- with .Values.resources }}
+          resources:
+            {{- tpl ( toYaml . ) $ | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: tmp
+              mountPath: "/tmp"
+              readOnly: false
+            - name: {{ include "rt.fullname" . }}-sidecar
+              mountPath: /opt/kx/sidecarConfig/
+            - name: {{ include "rt.fullname" . }}-log
+              mountPath: /opt/kx/config
+            - name: db-service-kx-license
+              mountPath: /opt/kx/lic
+              readOnly: true
+            - name: {{ include "rt.fullname" . }}
+              mountPath: /s
+            {{- with .Values.volumeMounts }}
+            {{- tpl ( toYaml . ) $ | nindent 12 }}
+            {{- end }}
+        - name: sidecar
+          image: "{{ .Values.image.repository }}/{{ .Values.dbsSidecar.component | default "kxi-sidecar" }}:{{ .Values.dbsSidecar.image.tag | default .Chart.AppVersion }}"
+          args: ["-p", "8080" ]
+          ports:
+            - containerPort: 8080
+              name: metrics
+          env:
+            - name: KXI_CONFIG_FILE
+              value: "/opt/kx/sidecarConfig/config.json"
+            - name: KXI_LOG_CONFIG
+              value: /opt/kx/config/qlog.json
+          volumeMounts:
+            - name: tmp-sidecar
+              mountPath: "/tmp"
+              readOnly: false
+            - name: {{ include "rt.fullname" . }}-sidecar
+              mountPath: /opt/kx/sidecarConfig/
+            - name: {{ include "rt.fullname" . }}-log
+              mountPath: /opt/kx/config
+            - name: db-service-kx-license
+              mountPath: /opt/kx/lic
+              readOnly: true
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 100Mi
+        - name: tmp-sidecar
+          emptyDir:
+            sizeLimit: 100Mi
+        - name: {{ include "rt.fullname" . }}-sidecar
+          configMap:
+            name: {{ include "rt.fullname" . }}-sidecar
+        - name: {{ include "rt.fullname" . }}-log
+          configMap:
+            name: {{ include "rt.fullname" . }}-log
+        - name: db-service-kx-license
+          secret:
+            defaultMode: 420
+            items:
+            - key: license
+              path: {{ .Values.kxLicenseName }}
+            optional: false
+            secretName: kx-license
+        {{- with .Values.volumes }}
+        {{- tpl ( toYaml . ) $ | nindent 8 }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- tpl ( toYaml . ) $ | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- tpl ( toYaml . ) $ | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- tpl ( toYaml . ) $ | nindent 8 }}
+      {{- end }}
+  volumeClaimTemplates:
+    - metadata:
+        name: {{ include "rt.fullname" . }}
+      spec:
+        {{- with .Values.persistence.accessModes }}
+        accessModes:
+        {{- tpl ( toYaml . ) $ | nindent 8 }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.persistence.capacity }}
+        storageClassName: {{ .Values.persistence.storageClass }}

@@ -1,0 +1,4 @@
+Installed DB Service database shard - {{ .Release.Name }}
+================================
+
+You have installed one DB Service database shard. This deploys RT for the shard stream and DB Service database components for ingest, persistence, and query.

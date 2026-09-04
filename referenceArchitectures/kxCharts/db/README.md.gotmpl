@@ -1,0 +1,126 @@
+# {{ template "chart.name" . }} Chart
+
+## Description
+
+This chart deploys the DB Service database components to allow a client to ingest and persist data. This chart deploys independently with the sole function of persisting data. Access to the data is typically via the [DB Service gateway chart](../gw) which due to different scaling characteristics is typically deployed independently.
+
+![db chart](../../img/db-chart.png)
+
+## Running
+
+### Prerequisites
+
+1. A working Kubernetes cluster with appropriate access to deploy applications
+1. A Distributed storage solution offering RWM access level. (Kubernetes docs for more [here](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes))
+1. `helm` command installed on your local machine
+1. Authentication details to Kx image repositories
+
+  ```bash
+  KX_USER=....
+  KX_PASS=....
+  KX_REGISTRY="portal.dl.kx.com"
+  NAMESPACE="db-service"
+  ```
+
+1. `imagePullSecrets` setup on your cluster
+
+  ```bash
+  kubectl create secret docker-registry kx-pull-secret --docker-username=$KX_USER --docker-password=$KX_PASS --docker-server=$KX_REGISTRY -n $NAMESPACE
+
+  ```
+
+1. A license secret
+
+  _Contact KX to get a license_
+
+  ```bash
+  LIC_FILE=./kc.lic
+  kubectl create secret generic kx-license --from-file=license=$LIC_FILE -n $NAMESPACE
+  ```
+
+1. A deployment specific values file (`myvalues.yaml`) with configurations relative to your deployment. Available configurations are documented in the chart. This can be displayed by running
+
+  ```bash
+  # Run from kxCharts/db directory
+  helm show values .
+  ```
+
+  A minimum `myvalues.yaml` configuration would contain
+
+  ```yaml
+  imagePullSecrets:
+  - name: kx-pull-secret
+
+  # -- You must set your license name. Default is `"kc.lic"`.
+  # Available types are:
+  #  - `"kc.lic"`
+  #  - `"k4.lic"`
+  #  - `"kx.lic"`
+  kxLicenseName: "kc.lic"
+
+  db:
+    # Intraday persistent storage configuration
+    idb:
+      # Defines the storageClassNames for all the persistent data storage in the DB Service database
+      # This should map to Kubernetes storageClassNames with accessMode of `RWM`.
+      # More information can be found here: https://kubernetes.io/docs/concepts/storage/storage-classes/
+      storageClassName: "sharedfiles"
+      # Size of the Intraday persistent storage
+      size: "2Gi"
+    # HDB Tier 1 persistent storage configuration
+    hdbt1:
+      # Defines the storageClassNames for all the persistent data storage in the DB Service database
+      # This should map to Kubernetes storageClassNames with accessMode of `RWM`.
+      # More information can be found here: https://kubernetes.io/docs/concepts/storage/storage-classes/
+      storageClassName: "sharedfiles"
+      # Size of the HDB Tier 1 persistent storage
+      size: "2Gi"
+    # Additional HDB tiers can be added to migrate data to slower storage as it ages.
+    # See the DB Service documentation for more information.
+
+  dbsDa:
+    # This should map to the resource coordinator svc deployed with the gw chart
+    # Typically naming convention is '{Chart.name}-gw-rc', but if the {Chart.name} is 'gw' it will remove the duplication
+    rcAddr: "gw-rc:5040"
+  ```
+
+### Deploying
+
+```bash
+# Run from '.../kxCharts/db' directory
+RELEASENAME=db # Unique name for this deployment
+VALUESFILE=myvalues.yaml
+helm install $RELEASENAME . -f $VALUESFILE -n $NAMESPACE
+```
+
+### Upgrading/updating config
+
+Upgrading and updating configuration are executed using `helm upgrade`. This will deploy any changes made to the charts or configuration since the last deploy and automatically redeploy the latest to the application
+
+```bash
+helm upgrade $RELEASENAME . -f $VALUESFILE -n $NAMESPACE
+```
+
+## Custom Deployment Assembly
+
+The default [assembly.yaml](assembly.yaml) contains deployment wiring for labels, RT stream, mounts, and SM tiers. Table schemas should be created through the DB Service table API after deployment.
+
+To change the deployment wiring, provide a custom assembly file:
+
+1. Create your own assembly file `myassembly.yaml` in the base directory of the `db` chart.
+1. Update your `myvalues.yaml` to use that assembly file.
+
+    ```
+    ...
+    assembly:
+      filename: myassembly.yaml
+    ...
+    ```
+
+1. Deploy as normal detailed [here](#deploying).
+
+## Configuration Options
+
+{{ template "localValues" ( dict "ctx" . "exclude" ( list ) ) }}
+
+{{ template "globalValues" ( dict "ctx" . ) }}

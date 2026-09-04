@@ -1,0 +1,12 @@
+# Custom DB Service shard values for the NYSE equities shard.
+db:
+  assembly:
+    filename: db-service-db-equities-assembly.yaml
+    name: equities_nyse
+
+  stream:
+    prefix: "rt-"
+    name: "db-service-db-equities-nyse"
+
+  labels:
+    exchange: "nyse"

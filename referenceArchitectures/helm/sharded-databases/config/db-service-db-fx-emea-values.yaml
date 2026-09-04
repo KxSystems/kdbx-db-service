@@ -1,0 +1,12 @@
+# Custom DB Service shard values for the EMEA FX shard.
+db:
+  assembly:
+    filename: db-service-db-fx-assembly.yaml
+    name: fx_emea
+
+  stream:
+    prefix: "rt-"
+    name: "db-service-db-fx-emea"
+
+  labels:
+    region: "emea"

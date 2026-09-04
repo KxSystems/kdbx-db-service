@@ -1,0 +1,68 @@
+{{- range $i, $e := until ( .Values.replicaCount | int ) }}
+{{- $targetPod := printf "%s-%d" ( include "rt.fullname" $ ) $i }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $targetPod }}
+  labels:
+    insights.kx.com/rtservice: "internal"
+    statefulset.kubernetes.io/pod-name: {{ $targetPod }}
+    {{- include "rt.labels" $ | nindent 4 }}
+  {{- with $.Values.service.annotations }}
+  annotations:
+    {{- tpl ( toYaml . ) $ | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ $.Values.service.type }}
+  ports:
+    - name: tcp-ext
+      port: 5000
+      targetPort: topic
+    - name: tcp-pull
+      port: 5001
+      targetPort: pull
+    - name: tcp-push
+      port: 5002
+      targetPort: push
+    - name: tcp-subserver
+      port: 5003
+      targetPort: tcp-subserver
+    - name: tcp-seq
+      port: 4000
+      targetPort: tcp-seq
+    - name: udp-raft
+      port: 7000
+      protocol: UDP
+      targetPort: udp-raft
+    - name: tcp-raft
+      port: 7100
+      targetPort: tcp-raft
+    - name: udp-watch
+      port: 9000
+      protocol: UDP
+      targetPort: udp-watch
+    - name: udp-seq
+      port: 8000
+      protocol: UDP
+      targetPort: udp-seq
+    - name: grpc-xsync
+      port: 5009
+      targetPort: xsync
+    - name: tcp-rest
+      port: 6000
+      targetPort: tcp-rest
+    - name: tcp-sup
+      port: 6001
+      targetPort: tcp-sup
+    - name: tcp-ext-sub
+      port: 5006
+      targetPort: tcp-ext-sub
+    - name: http-metrics
+      port: 8080
+      protocol: TCP
+      targetPort: metrics
+  selector:
+    statefulset.kubernetes.io/pod-name: {{ $targetPod }}
+    {{- include "rt.selectorLabels" $ | nindent 4 }}
+{{- end }}

@@ -1,0 +1,80 @@
+# Common values for every DB Service database shard.
+.common_values: &common_values
+  imagePullSecrets:
+    - name: kx-pull-secret
+
+  # -- You must set your license name. Default is `"kc.lic"`.
+  # Available types are:
+  #  - kc.lic
+  #  - k4.lic
+  #  - kx.lic
+  kxLicenseName: "k4.lic"
+
+db:
+  <<: *common_values
+
+  db:
+    idb:
+      storageClassName: "sharedfiles"
+      size: "2Gi"
+    hdbt1:
+      storageClassName: "sharedfiles"
+      size: "2Gi"
+    imports:
+      enabled: true
+      mountPath: /imports
+      storageClassName: "sharedfiles"
+      size: "1Gi"
+
+  stream:
+    prefix: "rt-"
+    replicas: 1
+
+  dbsDa:
+    <<: *common_values
+    rcAddr: "db-service-api-gw-rc:5050"
+    service:
+      port: 5080
+    allowedSbxApis: .query.q,.query.sql
+    envs:
+      - name: QLIC
+        value: /opt/kx/lic
+      - name: KXI_LOG_FORMAT
+        value: text
+      - name: KXI_LOG_LEVELS
+        value: default:trace
+
+  dbsSm:
+    service:
+      port: 20001
+    envs:
+      - name: QLIC
+        value: /opt/kx/lic
+      - name: KXI_SM_OBJSTORE_CONVERSION
+        value: "true"
+      - name: KXI_LOG_FORMAT
+        value: text
+      - name: KXI_LOG_LEVELS
+        value: default:trace
+
+rt:
+  <<: *common_values
+
+  image:
+    tag: "1.18.0"
+
+  replicaCount: 1
+
+  envs:
+    - name: RT_LOGLEVEL_CONSOLE
+      value: "INFO"
+    - name: RT_QURAFT_LOG_LEVEL
+      value: "INFO"
+    - name: RT_LOG_LEADER
+      value: "1"
+
+  externalService:
+    enabled: false
+
+  persistence:
+    capacity: 2Gi

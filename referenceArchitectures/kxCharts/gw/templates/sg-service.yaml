@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "gw.fullname" . }}-sg
+  {{- with .Values.dbsSg.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  labels:
+    {{- include "gw.sg.labels" . | nindent 4 }}
+    app: {{ include "gw.fullname" . }}-sg
+spec:
+  type: {{ .Values.dbsSg.service.type }}
+  ports:
+    - name: gw-qipc
+      port: {{ .Values.dbsSg.service.ports.qipc }}
+      targetPort: {{.Values.dbsSg.service.ports.qipc}}
+    {{- if .Values.dbsSg.customIpcAuth.enabled }}
+    - name: gw-ext-qipc
+      port: {{ .Values.dbsSg.service.ports.qipcext }}
+      targetPort: {{ .Values.dbsSg.service.ports.qipcext }}
+    {{- end }}
+    - name: gw-http
+      port: {{.Values.dbsSg.service.ports.http}}
+      targetPort: {{.Values.dbsSg.service.ports.http}}
+    - name: gw-metrics
+      port: 8081
+      targetPort: metrics
+  selector:
+    {{- include "gw.sg.selectorLabels" . | nindent 4 }}

@@ -5,17 +5,25 @@ info:
   description: OpenAPI spec for the KDB-X Database Service.
 servers:
   - url: http://localhost:8080
+security: []
 tags:
 - name: Tables
+  description: Create, inspect, list, and delete table schemas.
 - name: Imports
+  description: Ingest data and manage import jobs.
+- name: Deletes
+  description: Delete rows from a table and manage delete jobs.
 - name: Query
+  description: Query table data using structured, SQL, or q requests.
+- name: Configuration
+  description: Export DB Service configuration artifacts.
 paths:
   /api/v0/query/simple:
     post:
       tags:
       - Query
       operationId: simple
-      summary: Structured query (parameterized)
+      summary: Structured query
       description: Structured query using explicit parameters (table, time range, filters, aggregations) rather than a free-form query string.
       requestBody:
         required: true
@@ -53,6 +61,11 @@ paths:
               - desc
               limit:
               - 3
+              scope:
+                assembly: marketdata-emea
+              labels:
+                region: emea
+                assetClass: fx
       responses:
         '200':
           description: Query executed successfully.
@@ -149,14 +162,143 @@ paths:
               "table": "fxquote",
               "startTS": "2026.03.02D00:00:00",
               "endTS": "2026.03.03D00:00:00",
+              "scope": {
+                "assembly": "marketdata-emea"
+              },
               "limit": 2
+            }' | jq
+  /api/v0/query/preview:
+    post:
+      tags:
+      - Query
+      operationId: preview
+      summary: Preview (lightweight table sample)
+      description: |
+        Lightweight data retrieval that fetches a small sample of a table using minimal time and resources, for reviewing data or testing software compatibility with a schema.
+
+        Returns up to `limit` rows from the table and time range. It is guaranteed to search all available data for results: if fewer than `limit` rows are returned, they contain all the available data. Beyond this there are no guarantees as to which particular rows are returned.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PreviewRequest'
+            example:
+              table: quote
+              startTS: 2024.11.02T00:00:00.000
+              endTS: 2024.11.03T00:00:00.000
+              limit: 500
+              scope:
+                assembly: marketdata-emea
+              labels:
+                region: emea
+                assetClass: fx
+      responses:
+        '200':
+          description: Query executed successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryResponse'
+              example:
+                header:
+                  corr: f98f13f8-621b-4721-b242-3afb94077441
+                  logCorr: f98f13f8-621b-4721-b242-3afb94077441
+                  rcvTS: '2026-01-22T07:36:33.459000000'
+                  http: json
+                  api: preview
+                  agg: ':192.168.240.7:5060'
+                  refVintage: -9223372036854776000
+                  rc: 0
+                  ac: 0
+                  ai: ""
+                  limitApplied: true
+                payload:
+                - time: 0D07:33:41.240573052
+                  sym: X
+                  realTime: '2026-01-24T07:33:41.240473052'
+                  ask: 2.975187
+                  asize: 14
+                  bid: 45.16773
+                  bsize: 36
+                  sensorID: 0
+                  randomID: 14
+                - time: 0D07:33:41.240573118
+                  sym: K
+                  realTime: '2026-01-24T07:33:41.240473118'
+                  ask: 36.78192
+                  asize: 27
+                  bid: 61.92058
+                  bsize: 28
+                  sensorID: 0
+                  randomID: 0
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Bad request (invalid query or parameters)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryResponse'
+              example:
+                header:
+                  corr: 457984f5-7e75-4544-95b8-59823844bf7b
+                  logCorr: 457984f5-7e75-4544-95b8-59823844bf7b
+                  version: 1
+                  rcvTS: '2026-03-31T07:12:12.483000000'
+                  http: json
+                  api: .query.preview
+                  agg: ''
+                  refVintage: 0
+                  rc: 56
+                  ac: 27
+                  ai: Table not found, table=quote
+                payload: []
+        '503':
+          description: Service unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorResponse'
+              example:
+                error: Service unavailable.
+      x-codeSamples:
+      - lang: Python
+        label: Python
+        source: |
+          session.query_preview(
+              table="fxquote",
+              startTS="2026.03.02D00:00:00.000",
+              endTS="2026.03.03D00:00:00.000",
+              limit=5,
+          )
+      - lang: q
+        label: q
+        source: |
+          session.queryPreview[`table`startTS`endTS`limit!(`fxquote;2026.03.02D;2026.03.03D;5)]
+      - lang: cURL
+        label: cURL
+        source: |
+          curl -s -X POST "http://localhost:8080/api/v0/query/preview" \
+            -H "Accept: application/json" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "table": "fxquote",
+              "startTS": "2026.03.02D00:00:00",
+              "endTS": "2026.03.03D00:00:00",
+              "scope": {
+                "assembly": "marketdata-emea"
+              },
+              "limit": 5
             }' | jq
   /api/v0/query/sql:
     post:
       tags:
       - Query
       operationId: sql
-      summary: SQL query (free-form)
+      summary: SQL query
       description: Executes a SQL query string (SELECT-only) against the database.
       requestBody:
         required: true
@@ -166,6 +308,8 @@ paths:
               $ref: '#/components/schemas/SqlRequest'
             example:
               query: select sym, bid, ask from quote where bid > 100 by sym
+              scope:
+                assembly: marketdata-emea
       responses:
         '200':
           description: Query executed successfully.
@@ -240,13 +384,13 @@ paths:
           curl -s -X POST "http://localhost:8080/api/v0/query/sql" \
             -H "Accept: application/json" \
             -H "Content-Type: application/json" \
-            -d '{"query": "SELECT * FROM instruments WHERE category LIKE '\''EM'\''"}' | jq
+            -d '{"query": "SELECT * FROM instruments WHERE category LIKE '\''EM'\''", "scope": {"assembly": "marketdata-emea"}}' | jq
   /api/v0/query/q:
     post:
       tags:
       - Query
       operationId: qsql
-      summary: q query (free-form)
+      summary: Q query
       description: Executes a q query string against the database.
       requestBody:
         required: true
@@ -257,6 +401,11 @@ paths:
             example:
               query: select from quote where sym=`DNDF.CAN, price>300.5
               agg: '{select minPx:min price by sym from x}'
+              scope:
+                assembly: marketdata-emea
+              labels:
+                region: emea
+                assetClass: fx
       responses:
         '200':
           description: Query executed successfully.
@@ -329,13 +478,13 @@ paths:
           curl -s -X POST "http://localhost:8080/api/v0/query/q" \
             -H "Accept: application/json" \
             -H "Content-Type: application/json" \
-            -d '{"query": "select o:first bid,h:max bid,l:min bid,c:last bid by trddate,sym from fxquote"}' | jq
+            -d '{"query": "select o:first bid,h:max bid,l:min bid,c:last bid by trddate,sym from fxquote", "scope": {"assembly": "marketdata-emea"}}' | jq
   /api/v0/imports/{jobId}:
     get:
       tags:
       - Imports
       operationId: ingestStatus
-      summary: Get batch ingest job status
+      summary: Get import status
       description: Returns the current status of a batch ingest job.
       parameters:
       - name: jobId
@@ -344,95 +493,123 @@ paths:
         schema:
           type: string
         description: Batch ingest job identifier.
+      - name: assembly
+        in: query
+        required: false
+        description: Assembly containing the import job. Required when DB Service is configured with more than one assembly; optional when exactly one assembly is configured.
+        schema:
+          type: string
+          minLength: 1
+        example: marketdata-emea
       responses:
         '200':
           description: Success. Job status returned.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BatchIngestStatusResponse'
+                $ref: '#/components/schemas/BatchImportStatusResponse'
               example: &idImportCompleted
-                name: 26adfb1d-29bc-fab9-5e32-73f80ea51300
-                pipeline: ''
+                jobId: 26adfb1d-29bc-fab9-5e32-73f80ea51300
                 database: db
-                updtype: ingest
+                jobType: import
                 status: completed
-                details:
-                  workerHandle: 34
-                  preprocessDone: '2026-03-22T13:25:44.177025580'
-                  subsessions:
-                  - ''
-                  dates:
-                  - '2026-02-03'
-                  tables:
-                  - forex
-                tbls:
+                affectedTables:
                 - forex
-                dates:
+                processedPartitions:
                 - '2026-02-03'
                 progress:
-                  cmdCurrent: ''
-                  cmdIndex: 1
-                  cmdTotal: 1
-                  subCurrent: ''
-                  subIndex: 0
-                  subTotal: 0
+                  currentPartition: ''
+                  partitionIndex: 1
+                  partitionTotal: 1
+                  currentTable: ''
+                  tableIndex: 0
+                  tableTotal: 0
                 error: ''
                 warnings: []
                 updated: '2026-03-22T13:25:44.312559923'
         '400':
-          description: Client error
+          description: Client error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BatchIngestStatusResponse'
-              example: &idImportErrored
-                name: 7800725b-df34-f6cf-d17f-7bdfd525c24e
-                pipeline: ''
-                database: db
-                updtype: ingest
-                status: errored
-                details:
-                  workerHandle: 34
-                tbls: []
-                dates: []
-                progress:
-                  cmdCurrent: ''
-                  cmdIndex: null
-                  cmdTotal: null
-                  subCurrent: ''
-                  subIndex: null
-                  subTotal: null
-                error: 'table does not exist in the schema, but createTable flag was not set to true: tables=,`quotes'
-                warnings: []
-                updated: '2026-03-31T07:39:08.699688365'
+                oneOf:
+                - $ref: '#/components/schemas/BatchImportStatusResponse'
+                - $ref: '#/components/schemas/SimpleErrorResponse'
+              examples:
+                importErrored:
+                  summary: Import job errored
+                  value: &idImportErrored
+                    jobId: 7800725b-df34-f6cf-d17f-7bdfd525c24e
+                    database: db
+                    jobType: import
+                    status: errored
+                    affectedTables: []
+                    processedPartitions: []
+                    progress:
+                      currentPartition: ''
+                      partitionIndex: null
+                      partitionTotal: null
+                      currentTable: ''
+                      tableIndex: null
+                      tableTotal: null
+                    error: 'table does not exist in the schema, but createTable flag was not set to true: tables=,`quotes'
+                    warnings: []
+                    updated: '2026-03-31T07:39:08.699688365'
+                assemblyRequired:
+                  summary: Assembly not specified
+                  value:
+                    error: assembly must be specified when the service is configured with more than one assembly
+                assemblyUnknown:
+                  summary: Unknown assembly
+                  value:
+                    error: 'unknown assembly: marketdata-emea'
         '503': &id503
           description: Service unavailable.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/SimpleErrorResponse'
-              example:
-                error: Service unavailable.
+              examples:
+                unavailable:
+                  summary: Service unavailable
+                  value:
+                    error: Service unavailable.
+                noDatabase:
+                  summary: No assembly has registered with the service yet
+                  value:
+                    error: No database is available
       x-codeSamples:
       - lang: Python
-        label: Python
+        label: Python (single assembly)
         source: session.get_import(job_id="3fa85f64-5717-4562-b3fc-2c963f66afa6")
+      - lang: Python
+        label: Python (specific assembly)
+        source: session.get_import(job_id="3fa85f64-5717-4562-b3fc-2c963f66afa6", assembly="marketdata-emea")
       - lang: q
-        label: q
+        label: q (single assembly)
         source: |
           session.getImport["3fa85f64-5717-4562-b3fc-2c963f66afa6"]
+      - lang: q
+        label: q (specific assembly)
+        source: |
+          session.getImport[`jobId`assembly!("3fa85f64-5717-4562-b3fc-2c963f66afa6";"marketdata-emea")]
       - lang: cURL
-        label: cURL
+        label: cURL (single assembly)
         source: |
           curl -X GET "http://localhost:8080/api/v0/imports/NAME" \
+            -H "Accept: application/json" | jq
+          # Note: Replace `NAME` above, with the "name" value returned from the import job.
+      - lang: cURL
+        label: cURL (specific assembly)
+        source: |
+          curl -X GET "http://localhost:8080/api/v0/imports/NAME?assembly=marketdata-emea" \
             -H "Accept: application/json" | jq
           # Note: Replace `NAME` above, with the "name" value returned from the import job.
     delete:
       tags:
       - Imports
       operationId: ingestDelete
-      summary: Cancel batch ingest job
+      summary: Cancel import
       description: Attempts to cancel a running batch ingest job.
       parameters:
       - name: jobId
@@ -441,42 +618,70 @@ paths:
         schema:
           type: string
         description: Batch ingest job identifier.
+      - name: assembly
+        in: query
+        required: false
+        description: Assembly containing the import job to cancel. Required when DB Service is configured with more than one assembly; optional when exactly one assembly is configured.
+        schema:
+          type: string
+          minLength: 1
+        example: marketdata-emea
       responses:
         '200':
           description: Success. Job canceled.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BatchIngestStatusResponse'
-              example: *idImportCompleted
-
-        '400':
-          description: Client error
+                type: string
+              example: Ingest aborted
+        '404':
+          description: Import job was not found or is no longer in a cancelable phase.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BatchIngestStatusResponse'
-              example: *idImportErrored
-        '503':
-          description: Service unavailable.
+                type: string
+              example: batch update not found or processing already started and therefore no longer abortable
+        '400':
+          description: Client error.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/SimpleErrorResponse'
-              example:
-                error: Service unavailable.
+              examples:
+                assemblyRequired:
+                  summary: Assembly not specified
+                  value:
+                    error: assembly must be specified when the service is configured with more than one assembly
+                assemblyUnknown:
+                  summary: Unknown assembly
+                  value:
+                    error: 'unknown assembly: marketdata-emea'
+        '503': *id503
       x-codeSamples:
       - lang: Python
-        label: Python
+        label: Python (single assembly)
         source: session.cancel_import(job_id="3fa85f64-5717-4562-b3fc-2c963f66afa6")
+      - lang: Python
+        label: Python (specific assembly)
+        source: session.cancel_import(job_id="3fa85f64-5717-4562-b3fc-2c963f66afa6", assembly="marketdata-emea")
       - lang: q
-        label: q
+        label: q (single assembly)
         source: |
           session.cancelImport["3fa85f64-5717-4562-b3fc-2c963f66afa6"]
+      - lang: q
+        label: q (specific assembly)
+        source: |
+          session.cancelImport[`jobId`assembly!("3fa85f64-5717-4562-b3fc-2c963f66afa6";"marketdata-emea")]
       - lang: cURL
-        label: cURL
+        label: cURL (single assembly)
         source: |
           curl -X DELETE "http://localhost:8080/api/v0/imports/NAME" \
+            -H "Accept: application/json" | jq
+          # Note: Replace `NAME` above, with the "name" value returned from the import job.
+      - lang: cURL
+        label: cURL (specific assembly)
+        source: |
+          curl -X DELETE "http://localhost:8080/api/v0/imports/NAME?assembly=marketdata-emea" \
             -H "Accept: application/json" | jq
           # Note: Replace `NAME` above, with the "name" value returned from the import job.
   /api/v0/imports/files:
@@ -484,7 +689,7 @@ paths:
       tags:
       - Imports
       operationId: importFiles
-      summary: Batch ingest from file(s) into a table
+      summary: Import files
       description: Submit a batch ingest job for a table using files on the server. 
           
           
@@ -492,6 +697,15 @@ paths:
           
 
           Returns a pending job response; ingestion continues after the response. Final success/failure is available via GET /api/v0/imports/{jobId}.
+      parameters:
+      - name: assembly
+        in: query
+        required: false
+        description: Assembly to import the files into. Required when DB Service is configured with more than one assembly; optional when exactly one assembly is configured.
+        schema:
+          type: string
+          minLength: 1
+        example: marketdata-emea
       requestBody:
         required: true
         content:
@@ -499,7 +713,7 @@ paths:
             schema:
               $ref: '#/components/schemas/FileIngestRequest'
             examples:
-              fileIngestQuickStart:
+              fileIngestMinimal:
                 summary: Minimal request
                 value:
                   table: quote
@@ -542,99 +756,106 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BatchIngestStatusResponse'
+                $ref: '#/components/schemas/BatchImportStatusResponse'
               example: &idImportPending
-                name: 26adfb1d-29bc-fab9-5e32-73f80ea51300
-                pipeline: ''
+                jobId: 26adfb1d-29bc-fab9-5e32-73f80ea51300
                 database: db
-                updtype: ingest
+                jobType: import
                 status: pending
-                details:
-                  workerHandle: 34
-                tbls: []
-                dates: []
+                affectedTables: []
+                processedPartitions: []
                 progress:
-                  cmdCurrent: ''
-                  cmdIndex: 0
-                  cmdTotal: 0
-                  subCurrent: ''
-                  subIndex: 0
-                  subTotal: 0
+                  currentPartition: ''
+                  partitionIndex: 0
+                  partitionTotal: 0
+                  currentTable: ''
+                  tableIndex: 0
+                  tableTotal: 0
                 error: ''
                 warnings: []
                 updated: '2026-03-22T13:25:44.177025580'
         '400':
-          description: Client error
+          description: Client error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BatchIngestStatusResponse'
-              example: *idImportErrored
-        '503':
-          description: Service unavailable.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SimpleErrorResponse'
-              example:
-                error: Service unavailable.
+                oneOf:
+                - $ref: '#/components/schemas/BatchImportStatusResponse'
+                - $ref: '#/components/schemas/SimpleErrorResponse'
+              examples:
+                importErrored:
+                  summary: Import job errored
+                  value: *idImportErrored
+                assemblyRequired:
+                  summary: Assembly not specified
+                  value:
+                    error: assembly must be specified when the service is configured with more than one assembly
+                assemblyUnknown:
+                  summary: Unknown assembly
+                  value:
+                    error: 'unknown assembly: marketdata-emea'
+        '503': *id503
       x-codeSamples:
       - lang: Python
-        label: Python (minimal request)
+        label: Python (single assembly)
         source: |
           session.import_files(
             table="fxquote",
             path="fxquote.parquet"
           )
       - lang: Python
+        label: Python (specific assembly)
+        source: |
+          session.import_files(
+            table="fxquote",
+            path="fxquote.parquet",
+            assembly="marketdata-emea"
+          )
+      - lang: Python
         label: Python (standard file ingest)
         source: |
           session.import_files(
-            table="fxquote", 
-            path="fxquote.csv.gz", 
-            format="csv", 
-            delimiter=",", 
-            decimal=".", 
+            table="fxquote",
+            path="fxquote.csv.gz",
+            assembly="marketdata-emea",
+            format="csv",
+            delimiter=",",
+            decimal=".",
             headerRowIndex= 0
           )
       - lang: Python
-        label: Python (includes postparse)
-        source: | 
-          session.import_files(
-            table="forex", 
-            path="forex.csv", 
-            format="csv", 
-            types="SFFDV", 
-            postparse="{\"time\": \"data[`date] + data`time\"}"
-          )
-      - lang: Python
-        label: Python (ingest + auto create table)
+        label: Python (postparse + create table)
         source: |
           session.import_files(
-            table="instruments", 
-            path="instruments.csv", 
-            createTable=True
+            table="forex",
+            path="forex.csv",
+            assembly="marketdata-emea",
+            format="csv",
+            types="SFFDV",
+            createTable=True,
+            include=["sym", "bid", "ask", "time"],
+            postparse={"time": "data[`date] + data`time"}
           )
       - lang: q
-        label: q (minimal request)
+        label: q (single assembly)
         source: |
           session.importFiles[`table`path!("fxquote";"fxquote.parquet")]
       - lang: q
+        label: q (specific assembly)
+        source: |
+          session.importFiles[`table`path`assembly!("fxquote";"fxquote.parquet";"marketdata-emea")]
+      - lang: q
         label: q (standard file ingest)
         source: |
-          session.importFiles[`table`path`format`delimiter`decimal`headerRowIndex!("fxquote";"fxquote.csv.gz";"csv";",";".";0)]
+          session.importFiles[`table`path`assembly`format`delimiter`decimal`headerRowIndex!("fxquote";"fxquote.csv.gz";"marketdata-emea";"csv";",";".";0)]
       - lang: q
-        label: q (includes postparse)
+        label: q (postparse + create table)
         source: |
-          session.importFiles[`table`path`format`types`postparse!("forex";"forex.csv";"csv";"SFFDV";{"time": "data[`date] + data`time"})]
-      - lang: q
-        label: q (ingest + auto create table)
-        source: |
-          session.importFiles[`table`path`createTable!("instruments";"instruments.csv";1b)]
+          session.importFiles([table:"forex";path:"forex.csv";assembly:"marketdata-emea";format:"csv";types:"SFFDV";createTable:1b;include:("sym";"bid";"ask";"time");postparse:([time:"data[`date] + data`time"])])
       - lang: cURL
         label: cURL (minimal request)
         source: |
-          curl -s -X POST "http://localhost:8080/api/v0/imports/files" \
+          curl -s -X POST "http://localhost:8080/api/v0/imports/files?assembly=marketdata-emea" \
             -H "Accept: application/json" \
             -H "Content-Type: application/json" \
             -d '{
@@ -644,7 +865,7 @@ paths:
       - lang: cURL
         label: cURL (standard file ingest)
         source: |
-          curl -s -X POST "http://localhost:8080/api/v0/imports/files" \
+          curl -s -X POST "http://localhost:8080/api/v0/imports/files?assembly=marketdata-emea" \
             -H "Accept: application/json" \
             -H "Content-Type: application/json" \
             -d '{
@@ -656,9 +877,9 @@ paths:
               "headerRowIndex": 0
             }' | jq
       - lang: cURL
-        label: cURL (includes postparse)
+        label: cURL (postparse + create table)
         source: |
-          curl -s -X POST "http://localhost:8080/api/v0/imports/files" \
+          curl -s -X POST "http://localhost:8080/api/v0/imports/files?assembly=marketdata-emea" \
             -H "Accept: application/json" \
             -H "Content-Type: application/json" \
             -d '{
@@ -666,69 +887,99 @@ paths:
               "path": "forex.csv",
               "format": "csv",
               "types": "SFFDV",
+              "createTable": true,
+              "include": ["sym", "bid", "ask", "time"],
               "postparse": {"time": "data[`date] + data`time"}
-            }' | jq
-      - lang: cURL
-        label: cURL (ingest + auto create table)
-        source: |
-          curl -s -X POST "http://localhost:8080/api/v0/imports/files" \
-            -H "Accept: application/json" \
-            -H "Content-Type: application/json" \
-            -d '{
-              "table": "instruments", 
-              "path": "instruments.csv", 
-              "createTable": "1"
             }' | jq
   /api/v0/imports/kdb:
     post:
       tags:
       - Imports
       operationId: ingestStart
-      summary: Batch ingest from a kdb database
+      summary: Import kdb database
       description: >-
         Submit a batch ingest job for a kdb-native data location readable by the
         service. The provided path may reference a partitioned HDB directory and
         may also support other kdb-native layouts such as splayed tables or
         basic/q-binary tables. The service returns a job ID
         and continues ingestion asynchronously after the response.
+      parameters:
+      - name: assembly
+        in: query
+        required: false
+        description: Assembly to import the kdb-native data into. Required when DB Service is configured with more than one assembly; optional when exactly one assembly is configured.
+        schema:
+          type: string
+          minLength: 1
+        example: marketdata-emea
       requestBody:
         required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/KdbIngestRequest'
-            example:
-              path: /path/to/hdb
-              mode: merge
-              createTable: false
+            examples:
+              kdbIngest:
+                summary: kdb-native import
+                value:
+                  path: /path/to/hdb
+                  mode: merge
+                  createTable: false
       responses:
         '202':
           description: Ingest job accepted
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BatchIngestStatusResponse'
+                $ref: '#/components/schemas/BatchImportStatusResponse'
               example: *idImportPending
         '400':
-          description: Client error
+          description: Client error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BatchIngestStatusResponse'
-              example: *idImportErrored
+                oneOf:
+                - $ref: '#/components/schemas/BatchImportStatusResponse'
+                - $ref: '#/components/schemas/SimpleErrorResponse'
+              examples:
+                importErrored:
+                  summary: Import job errored
+                  value: *idImportErrored
+                assemblyRequired:
+                  summary: Assembly not specified
+                  value:
+                    error: assembly must be specified when the service is configured with more than one assembly
+                assemblyUnknown:
+                  summary: Unknown assembly
+                  value:
+                    error: 'unknown assembly: marketdata-emea'
         '503': *id503
       x-codeSamples:
       - lang: Python
-        label: Python
+        label: Python (single assembly)
         source: session.import_database(path="fxquote-hdb")
+      - lang: Python
+        label: Python (specific assembly)
+        source: session.import_database(path="fxquote-hdb", assembly="marketdata-emea")
       - lang: q
-        label: q
+        label: q (single assembly)
         source: |
           session.importKDB[enlist[`path]!enlist"fxquote-hdb"]
+      - lang: q
+        label: q (specific assembly)
+        source: |
+          session.importKDB[`path`assembly!("fxquote-hdb";"marketdata-emea")]
       - lang: cURL
-        label: cURL
+        label: cURL (single assembly)
         source: |
           curl -X POST "http://localhost:8080/api/v0/imports/kdb" \
+            -H "Accept: application/json" \
+            -H "Content-Type: application/json" \
+            -d '{"path": "fxquote-hdb"}' | jq
+      - lang: cURL
+        label: cURL (specific assembly)
+        source: |
+          curl -X POST "http://localhost:8080/api/v0/imports/kdb?assembly=marketdata-emea" \
             -H "Accept: application/json" \
             -H "Content-Type: application/json" \
             -d '{"path": "fxquote-hdb"}' | jq
@@ -737,8 +988,17 @@ paths:
       tags:
       - Imports
       operationId: importData
-      summary: Ingest data from the JSON content of the request
+      summary: Import JSON
       description: Insert data provided inline in the request body. Supports either a row-matrix (array of rows) or a list of JSON dictionaries (one object per row). Returns a pending job response; final success/failure is available via GET /api/v0/imports/{jobId}.
+      parameters:
+      - name: assembly
+        in: query
+        required: false
+        description: Assembly to import the inline data into. Required when DB Service is configured with more than one assembly; optional when exactly one assembly is configured.
+        schema:
+          type: string
+          minLength: 1
+        example: marketdata-emea
       requestBody:
         required: true
         content:
@@ -746,6 +1006,24 @@ paths:
             schema:
               $ref: '#/components/schemas/DataIngestRequest'
             examples:
+              apiIngestRows:
+                summary: Row matrix with column names
+                value:
+                  table: quote
+                  data:
+                  - - '2026-01-21T10:00:00.000'
+                    - AAPL
+                    - 101.1
+                    - 101.2
+                  - - '2026-01-21T10:00:01.000'
+                    - AAPL
+                    - 101.2
+                    - 101.3
+                  columnNames:
+                  - timestamp
+                  - sym
+                  - bid
+                  - ask
               apiIngestRowMatrix:
                 summary: Row matrix
                 value:
@@ -792,7 +1070,7 @@ paths:
                   - sym
                   - bid
                   - ask
-                  types: PSFFF
+                  types: psff
               apiIngestAutoCreateObjects:
                 summary: JSON objects — create table
                 value:
@@ -812,29 +1090,43 @@ paths:
                   - sym
                   - bid
                   - ask
-                  types: PSFFF
+                  types: psff
       responses:
         '202':
           description: Ingest job accepted
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BatchIngestStatusResponse'
+                $ref: '#/components/schemas/BatchImportStatusResponse'
               example: *idImportPending
         '400':
-          description: Client error
+          description: Client error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BatchIngestStatusResponse'
-              example: *idImportErrored
+                oneOf:
+                - $ref: '#/components/schemas/BatchImportStatusResponse'
+                - $ref: '#/components/schemas/SimpleErrorResponse'
+              examples:
+                importErrored:
+                  summary: Import job errored
+                  value: *idImportErrored
+                assemblyRequired:
+                  summary: Assembly not specified
+                  value:
+                    error: assembly must be specified when the service is configured with more than one assembly
+                assemblyUnknown:
+                  summary: Unknown assembly
+                  value:
+                    error: 'unknown assembly: marketdata-emea'
         '503': *id503
       x-codeSamples:
       - lang: Python
-        label: Python (Rows payload)
+        label: Python (rows payload)
         source: |
           session.import_data(
             table="fxquote",
+            assembly="marketdata-emea",
             data=[
               ["2026-01-21", "2026-01-21T10:00:00.000", "EURUSD", 901.2, 901.3],
               ["2026-01-21", "2026-01-21T10:00:00.000", "EURUSD", 901.2, 901.3]
@@ -844,31 +1136,35 @@ paths:
           )
           # Note: for rows payload, columnNames are required.
       - lang: Python
-        label: Python (Objects payload)
+        label: Python (objects payload)
         source: | 
           session.import_data(
             table="instruments",
+            assembly="marketdata-emea",
             data=[
               {"instrumentid":77, "sym":"USDBRL", "category":"EM", "decimals":4, "pipdecimals": 4},
               {"instrumentid":78, "sym":"USDKRW", "category":"EM", "decimals":2, "pipdecimals": 2},
             ],
+            createTable=True,
+            columnNames=["instrumentid", "sym", "category", "decimals", "pipdecimals"],
+            types="fssff",
             insert_as="objects"
           )
       - lang: q
-        label: q (Rows payload)
+        label: q (rows payload)
         source: |
           data:(("2026-01-21";"2026-01-21T10:00:00.000";"EURUSD";901.2;901.3);("2026-01-21";"2026-01-21T10:00:00.000";"EURUSD";901.2;901.3));
-          session.importData[`table`data`columnNames!(`fxquote;data;(`trddate`ts`sym`bid`ask))]
+          session.importData[`table`assembly`data`columnNames!(`fxquote;"marketdata-emea";data;(`trddate`ts`sym`bid`ask))]
           # Note: for rows payload, columnNames are required.
       - lang: q
-        label: q (Objects payload)
+        label: q (objects payload)
         source: |
           data:((`instrumentid`sym`category`decimals`pipdecimals)!(77;"USDBRL";"EM";4;4);(`instrumentid`sym`category`decimals`pipdecimals)!(78;"USDKRW";"EM";2;2));
-          session.importData[`table`data!(`instruments;data)]
+          session.importData([table:`instruments;assembly:"marketdata-emea";data;createTable:1b;columnNames:`instrumentid`sym`category`decimals`pipdecimals;types:"fssff"])
       - lang: cURL
-        label: cURL (Rows payload)
+        label: cURL (rows payload)
         source: |
-          curl -s -X POST "http://localhost:8080/api/v0/imports/data" \
+          curl -s -X POST "http://localhost:8080/api/v0/imports/data?assembly=marketdata-emea" \
             -H "Accept: application/json" \
             -H "Content-Type: application/json" \
             -d '{
@@ -882,9 +1178,9 @@ paths:
             }' | jq
           # Note: for rows payload, columnNames are required.
       - lang: cURL
-        label: cURL (Objects payload)
+        label: cURL (objects payload)
         source: |
-          curl -s -X POST "http://localhost:8080/api/v0/imports/data" \
+          curl -s -X POST "http://localhost:8080/api/v0/imports/data?assembly=marketdata-emea" \
             -H "Accept: application/json" \
             -H "Content-Type: application/json" \
             -d '{
@@ -893,8 +1189,546 @@ paths:
                 {"instrumentid": 77, "sym": "USDBRL", "category": "EM", "decimals": 4, "pipdecimals": 4},
                 {"instrumentid": 78, "sym": "USDKRW", "category": "EM", "decimals": 2, "pipdecimals": 2}
               ],
-              "insert_as": "objects"
+              "createTable": true,
+              "columnNames": ["instrumentid", "sym", "category", "decimals", "pipdecimals"],
+              "types": "fssff"
             }' | jq
+  /api/v0/deletes:
+    post:
+      tags:
+      - Deletes
+      operationId: deleteStart
+      summary: Delete rows from a table
+      description: |
+        Submits a batch delete job for a table, removing the rows that match an optional time window and a filter. The job is asynchronous: the `202` carries a pending job response, deletion continues after it, and the final outcome is read from `GET /api/v0/deletes/{jobId}`.
+
+        Rows are removed from the on-disk partitions and from the in-memory tiers, so a window reaching into the interval currently being ingested is accepted. The delete is bounded by the position in the stream at which it executes: rows arriving after that point are kept, even where they fall inside the requested window. In-memory rows go as each database process applies the delete, shortly after the job is accepted, so a query issued immediately afterwards may still return them.
+
+        Rows already moved to an object storage tier cannot be deleted. A `startTS` on or before the object storage watermark is rejected with a `400`; raise `startTS` so that the window begins after the data held in object storage.
+
+        For a table that is not partitioned, `startTS` and `endTS` are ignored and `filter` alone selects the rows to delete.
+      parameters:
+      - name: assembly
+        in: query
+        required: false
+        description: Assembly to delete rows from. Required when DB Service is configured with more than one assembly; optional when exactly one assembly is configured.
+        schema:
+          type: string
+          minLength: 1
+        example: marketdata-emea
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteRequest'
+            examples:
+              deleteWithFilter:
+                summary: Delete matching rows within a time window
+                value:
+                  table: trade
+                  startTS: '2026.04.03D00:00:00.000000000'
+                  endTS: '2026.04.04D00:00:00.000000000'
+                  filter:
+                  - - '='
+                    - sym
+                    - AAPL
+              deleteAllInWindow:
+                summary: Delete all rows within a time window
+                value:
+                  table: trade
+                  startTS: '2026.04.03D00:00:00.000000000'
+                  endTS: '2026.04.04D00:00:00.000000000'
+                  filter: []
+      responses:
+        '202':
+          description: Delete job accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchImportStatusResponse'
+              example: &idDeletePending
+                jobId: 54f5cf87-dbc2-4336-d109-173ed56c0b86
+                database: db
+                jobType: delete
+                status: pending
+                affectedTables: []
+                processedPartitions: []
+                progress:
+                  currentPartition: ''
+                  partitionIndex: 0
+                  partitionTotal: 0
+                  currentTable: ''
+                  tableIndex: 0
+                  tableTotal: 0
+                error: ''
+                warnings: []
+                updated: '2026-08-18T13:25:44.177025580'
+        '400':
+          description: Client error.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/BatchImportStatusResponse'
+                - $ref: '#/components/schemas/SimpleErrorResponse'
+              examples:
+                deleteErrored:
+                  summary: Delete job errored
+                  value: &idDeleteErrored
+                    jobId: 7800725b-df34-f6cf-d17f-7bdfd525c24e
+                    database: db
+                    jobType: delete
+                    status: errored
+                    affectedTables: []
+                    processedPartitions: []
+                    progress:
+                      currentPartition: ''
+                      partitionIndex: null
+                      partitionTotal: null
+                      currentTable: ''
+                      tableIndex: null
+                      tableTotal: null
+                    error: Cannot delete from object storage tier, please increase startTS to avoid overlap
+                    warnings: []
+                    updated: '2026-08-18T13:25:44.312559923'
+                assemblyRequired:
+                  summary: Assembly not specified
+                  value:
+                    error: assembly must be specified when the service is configured with more than one assembly
+                assemblyUnknown:
+                  summary: Unknown assembly
+                  value:
+                    error: 'unknown assembly: marketdata-emea'
+        '503': *id503
+      x-codeSamples:
+      - lang: Python
+        label: Python (matching rows)
+        source: |
+          session.delete_rows(
+              table="trade",
+              startTS="2026.04.03D00:00:00.000000000",
+              endTS="2026.04.04D00:00:00.000000000",
+              filter=[["=", "sym", "AAPL"]]
+          )
+      - lang: Python
+        label: Python (all rows in window)
+        source: |
+          session.delete_rows(
+              table="trade",
+              startTS="2026.04.03D00:00:00.000000000",
+              endTS="2026.04.04D00:00:00.000000000",
+              filter=[]
+          )
+          # An empty filter is mandatory to delete every row in the window - a missing filter is rejected.
+      - lang: Python
+        label: Python (specific assembly)
+        source: |
+          session.delete_rows(
+              table="trade",
+              startTS="2026.04.03D00:00:00.000000000",
+              endTS="2026.04.04D00:00:00.000000000",
+              filter=[["=", "sym", "AAPL"]],
+              assembly="marketdata-emea"
+          )
+      - lang: q
+        label: q (matching rows)
+        source: |
+          session.deleteRows[`table`startTS`endTS`filter!("trade";2026.04.03D00:00:00.000000000;2026.04.04D00:00:00.000000000;enlist("=";"sym";"AAPL"))]
+      - lang: q
+        label: q (all rows in window)
+        source: |
+          session.deleteRows[`table`startTS`endTS`filter!("trade";2026.04.03D00:00:00.000000000;2026.04.04D00:00:00.000000000;())]
+      - lang: q
+        label: q (specific assembly)
+        source: |
+          session.deleteRows[([table:"trade";startTS:2026.04.03D00:00:00.000000000;endTS:2026.04.04D00:00:00.000000000;filter:enlist("=";"sym";"AAPL");assembly:"marketdata-emea"])]
+      - lang: cURL
+        label: cURL (single assembly)
+        source: |
+          curl -s -X POST "http://localhost:8080/api/v0/deletes" \
+            -H "Accept: application/json" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "table": "trade",
+              "startTS": "2026.04.03D00:00:00.000000000",
+              "endTS": "2026.04.04D00:00:00.000000000",
+              "filter": [["=", "sym", "AAPL"]]
+            }' | jq
+      - lang: cURL
+        label: cURL (specific assembly)
+        source: |
+          curl -s -X POST "http://localhost:8080/api/v0/deletes?assembly=marketdata-emea" \
+            -H "Accept: application/json" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "table": "trade",
+              "startTS": "2026.04.03D00:00:00.000000000",
+              "endTS": "2026.04.04D00:00:00.000000000",
+              "filter": [["=", "sym", "AAPL"]]
+            }' | jq
+
+  /api/v0/deletes/{jobId}:
+    get:
+      tags:
+      - Deletes
+      operationId: deleteStatus
+      summary: Get batch delete job status
+      description: Returns the current status of a batch delete job.
+      parameters:
+      - name: jobId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Batch delete job identifier.
+      - name: assembly
+        in: query
+        required: false
+        description: Assembly containing the delete job. Required when DB Service is configured with more than one assembly; optional when exactly one assembly is configured.
+        schema:
+          type: string
+          minLength: 1
+        example: marketdata-emea
+      responses:
+        '200':
+          description: Success. Job status returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchImportStatusResponse'
+              example: &idDeleteCompleted
+                jobId: 54f5cf87-dbc2-4336-d109-173ed56c0b86
+                database: db
+                jobType: delete
+                status: completed
+                affectedTables:
+                - trade
+                processedPartitions:
+                - '2026-04-03'
+                progress:
+                  currentPartition: ''
+                  partitionIndex: 1
+                  partitionTotal: 1
+                  currentTable: ''
+                  tableIndex: 0
+                  tableTotal: 0
+                error: ''
+                warnings: []
+                updated: '2026-08-18T13:47:27.461244645'
+        '400':
+          description: Client error.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/BatchImportStatusResponse'
+                - $ref: '#/components/schemas/SimpleErrorResponse'
+              examples:
+                deleteErrored:
+                  summary: Delete job errored
+                  value: *idDeleteErrored
+                assemblyRequired:
+                  summary: Assembly not specified
+                  value:
+                    error: assembly must be specified when the service is configured with more than one assembly
+                assemblyUnknown:
+                  summary: Unknown assembly
+                  value:
+                    error: 'unknown assembly: marketdata-emea'
+        '404':
+          description: Unknown or expired job ID.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorResponse'
+              example:
+                error: 'Batch delete session not found: jobId=54f5cf87-dbc2-4336-d109-173ed56c0b86'
+        '503': *id503
+      x-codeSamples:
+      - lang: Python
+        label: Python (single assembly)
+        source: session.get_delete(job_id="54f5cf87-dbc2-4336-d109-173ed56c0b86")
+      - lang: Python
+        label: Python (specific assembly)
+        source: session.get_delete(job_id="54f5cf87-dbc2-4336-d109-173ed56c0b86", assembly="marketdata-emea")
+      - lang: q
+        label: q (single assembly)
+        source: |
+          session.getDelete["54f5cf87-dbc2-4336-d109-173ed56c0b86"]
+      - lang: q
+        label: q (specific assembly)
+        source: |
+          session.getDelete[`jobId`assembly!("54f5cf87-dbc2-4336-d109-173ed56c0b86";"marketdata-emea")]
+      - lang: cURL
+        label: cURL (single assembly)
+        source: |
+          curl -X GET "http://localhost:8080/api/v0/deletes/NAME" \
+            -H "Accept: application/json" | jq
+          # Note: Replace `NAME` above, with the "jobId" value returned from the delete job.
+      - lang: cURL
+        label: cURL (specific assembly)
+        source: |
+          curl -X GET "http://localhost:8080/api/v0/deletes/NAME?assembly=marketdata-emea" \
+            -H "Accept: application/json" | jq
+          # Note: Replace `NAME` above, with the "jobId" value returned from the delete job.
+    delete:
+      tags:
+      - Deletes
+      operationId: deleteDelete
+      summary: Cancel a batch delete job
+      description: >-
+        Clears a batch delete job's tracked status, so that the job no longer appears in
+        `GET /api/v0/deletes/{jobId}`. This does not abort or roll back an in-flight delete:
+        once submitted, a delete always runs to completion.
+      parameters:
+      - name: jobId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Batch delete job identifier.
+      - name: assembly
+        in: query
+        required: false
+        description: Assembly containing the delete job to clear. Required when DB Service is configured with more than one assembly; optional when exactly one assembly is configured.
+        schema:
+          type: string
+          minLength: 1
+        example: marketdata-emea
+      responses:
+        '200':
+          description: Success. Job canceled. This is idempotent - it also returns 200 if the jobId is unknown or was already canceled/cleared.
+          content:
+            application/json:
+              schema:
+                type: string
+              example: ''
+        '400':
+          description: Client error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorResponse'
+              examples:
+                assemblyRequired:
+                  summary: Assembly not specified
+                  value:
+                    error: assembly must be specified when the service is configured with more than one assembly
+                assemblyUnknown:
+                  summary: Unknown assembly
+                  value:
+                    error: 'unknown assembly: marketdata-emea'
+        '503': *id503
+      x-codeSamples:
+      - lang: Python
+        label: Python (single assembly)
+        source: session.cancel_delete(job_id="54f5cf87-dbc2-4336-d109-173ed56c0b86")
+      - lang: Python
+        label: Python (specific assembly)
+        source: session.cancel_delete(job_id="54f5cf87-dbc2-4336-d109-173ed56c0b86", assembly="marketdata-emea")
+      - lang: q
+        label: q (single assembly)
+        source: |
+          session.cancelDelete["54f5cf87-dbc2-4336-d109-173ed56c0b86"]
+      - lang: q
+        label: q (specific assembly)
+        source: |
+          session.cancelDelete[`jobId`assembly!("54f5cf87-dbc2-4336-d109-173ed56c0b86";"marketdata-emea")]
+      - lang: cURL
+        label: cURL (single assembly)
+        source: |
+          curl -X DELETE "http://localhost:8080/api/v0/deletes/NAME" \
+            -H "Accept: application/json" | jq
+          # Note: Replace `NAME` above, with the "jobId" value returned from the delete job.
+      - lang: cURL
+        label: cURL (specific assembly)
+        source: |
+          curl -X DELETE "http://localhost:8080/api/v0/deletes/NAME?assembly=marketdata-emea" \
+            -H "Accept: application/json" | jq
+          # Note: Replace `NAME` above, with the "jobId" value returned from the delete job.
+
+  /api/v0/config/assembly:
+    get:
+      operationId: exportAssembly
+      summary: Export assembly YAML
+      description: |
+        Exports the active assembly configuration for a DB Service deployment as YAML.
+
+        The assembly is the database configuration document used by DB Service. It defines the assembly name, labels, table schemas, stream bus settings, storage mounts, and service elements such as Storage Manager tiers and DAP mounts.
+
+        The response body is the YAML document itself, not a JSON wrapper.
+      tags:
+      - Configuration
+      parameters:
+      - name: assembly
+        in: query
+        required: false
+        description: Name of the assembly configuration to export. Required when DB Service is configured with more than one assembly; optional when exactly one assembly is configured.
+        schema:
+          type: string
+          minLength: 1
+        example: marketdata-emea
+      responses:
+        '200':
+          description: Active assembly returned as YAML.
+          content:
+            application/yaml:
+              schema:
+                $ref: '#/components/schemas/Assembly'
+              example:
+                name: Test assembly
+                description: Test assembly
+                labels:
+                  region: NAM
+                bus:
+                  messages:
+                    protocol: rt
+                    topic: dataStream
+                  stream:
+                    protocol: custom
+                    topic: dataStream
+                    nodes:
+                    - tick:5010
+                mounts:
+                  rdb:
+                    type: stream
+                    baseURI: none
+                    partition: none
+                  idb:
+                    type: local
+                    baseURI: file:///shared/data/db/idb
+                    partition: ordinal
+                  hdb:
+                    type: local
+                    baseURI: file:///shared/data/db/hdb
+                    partition: date
+                tables:
+                  fxquote:
+                    description: FX quote data
+                    type: partitioned
+                    blockSize: 10000
+                    prtnCol: ts
+                    sortColsMem:
+                    - sym
+                    sortColsOrd:
+                    - sym
+                    sortColsDisk:
+                    - sym
+                    columns:
+                    - name: trddate
+                      description: Trade date
+                      type: date
+                    - name: ts
+                      description: Quote timestamp
+                      type: timestamp
+                    - name: sym
+                      description: Symbol name
+                      type: symbol
+                      attrMem: grouped
+                      attrOrd: parted
+                      attrDisk: parted
+                    - name: bid
+                      description: Bid price
+                      type: float
+                    - name: ask
+                      description: Ask price
+                      type: float
+                elements:
+                  sm:
+                    source: stream
+                    tiers:
+                    - name: stream
+                      mount: rdb
+                    - name: idb
+                      mount: idb
+                      schedule:
+                        freq: 0D00:10:00
+                    - name: hdb1
+                      mount: hdb
+                      schedule:
+                        freq: 1D00:00:00
+                        snap: "01:35:00"
+                      retain:
+                        time: 2 days
+                      compression:
+                        algorithm: gzip
+                        block: 17
+                        level: 9
+                    enforceSchema: false
+                    chunkSize: 500000
+                    sortLimitGB: 1
+                    waitTm: 250
+                    eodPeachLevel:
+                    - table
+                    disableDiscovery: true
+        '400': &idAssemblyError
+          description: Client error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorResponse'
+              examples:
+                assemblyRequired:
+                  summary: Assembly not specified
+                  value:
+                    error: assembly must be specified when the service is configured with more than one assembly
+                assemblyUnknown:
+                  summary: Unknown assembly
+                  value:
+                    error: 'unknown assembly: marketdata-emea'
+        '409':
+          description: Assembly export is not available for this deployment.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorResponse'
+              example:
+                error: Assembly export is only available for DB Service deployments.
+        '503': *id503
+      x-codeSamples:
+      - lang: Python
+        label: Python (show YAML)
+        source: |
+          assembly_yaml = session.export_assembly()
+          print(assembly_yaml)
+      - lang: Python
+        label: Python (save as assembly.yaml)
+        source: |
+          session.export_assembly(filename="assembly.yaml")
+      - lang: Python
+        label: Python (specific assembly)
+        source: |
+          assembly_yaml = session.export_assembly(assembly="marketdata-emea")
+          print(assembly_yaml)
+      - lang: q
+        label: q (show YAML)
+        source: |
+          session.exportAssembly[]
+      - lang: q
+        label: q (save as assembly.yaml)
+        source: |
+          session.exportAssembly["assembly.yaml"]
+      - lang: q
+        label: q (specific assembly)
+        source: |
+          session.exportAssembly[enlist[`assembly]!enlist "marketdata-emea"]
+      - lang: cURL
+        label: cURL (show YAML)
+        source: |
+          curl -X GET "http://localhost:8080/api/v0/config/assembly" \
+            -H "Accept: application/yaml"
+      - lang: cURL
+        label: cURL (save as assembly.yaml)
+        source: |
+          curl -X GET "http://localhost:8080/api/v0/config/assembly" \
+            -H "Accept: application/yaml" \
+            -o assembly.yaml
+      - lang: cURL
+        label: cURL (specific assembly)
+        source: |
+          curl -X GET "http://localhost:8080/api/v0/config/assembly?assembly=marketdata-emea" \
+            -H "Accept: application/yaml"
   /api/v0/tables:
     get:
       operationId: listTables
@@ -902,6 +1736,15 @@ paths:
       description: Returns the names of all tables in the database.
       tags:
       - Tables
+      parameters:
+      - name: assembly
+        in: query
+        required: false
+        description: Assembly whose table names are returned. Required when DB Service is configured with more than one assembly; optional when exactly one assembly is configured.
+        schema:
+          type: string
+          minLength: 1
+        example: marketdata-emea
       responses:
         '200':
           description: Success. Table names are returned.
@@ -914,26 +1757,32 @@ paths:
               example:
                 - forex
                 - sensor
-        '503':
-          description: Service unavailable
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SimpleErrorResponse'
-              example:
-                error: Service unavailable
+        '400': *idAssemblyError
+        '503': *id503
       x-codeSamples:
       - lang: Python
-        label: Python
+        label: Python (single assembly)
         source: session.list_tables()
+      - lang: Python
+        label: Python (specific assembly)
+        source: session.list_tables(assembly="marketdata-emea")
       - lang: q
-        label: q
+        label: q (single assembly)
         source: |
           session.listTables[]
+      - lang: q
+        label: q (specific assembly)
+        source: |
+          session.listTables[enlist[`assembly]!enlist "marketdata-emea"]
       - lang: cURL
-        label: cURL
+        label: cURL (single assembly)
         source: |
           curl -s -X GET "http://localhost:8080/api/v0/tables" \
+            -H "Accept: application/json" | jq
+      - lang: cURL
+        label: cURL (specific assembly)
+        source: |
+          curl -s -X GET "http://localhost:8080/api/v0/tables?assembly=marketdata-emea" \
             -H "Accept: application/json" | jq
   /api/v0/tables/{table}:
     post:
@@ -949,6 +1798,14 @@ paths:
         description: Table name
         schema:
           type: string
+      - name: assembly
+        in: query
+        required: false
+        description: Assembly to create the table in. Required when DB Service is configured with more than one assembly; optional when exactly one assembly is configured.
+        schema:
+          type: string
+          minLength: 1
+        example: marketdata-emea
       requestBody:
         required: true
         content:
@@ -988,26 +1845,15 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BatchIngestStatusResponse'
+                $ref: '#/components/schemas/SchemaChangeStatus'
               example:
-                name: d9726870-1c5c-0d13-4b90-be5fbcb2ad2f
-                pipeline: ''
-                database: db
-                updtype: schemaChange
+                jobId: d9726870-1c5c-0d13-4b90-be5fbcb2ad2f
                 status: completed
-                details: []
-                tbls: []
-                dates: []
-                progress:
-                  cmdCurrent: ''
-                  cmdIndex: 0
-                  cmdTotal: 0
-                  subCurrent: ''
-                  subIndex: 0
-                  subTotal: 0
-                error: ''
+                statusUri: /api/v0/jobs/d9726870-1c5c-0d13-4b90-be5fbcb2ad2f
+                startedAt: '2026-03-30T13:37:44.365774085'
+                finishedAt: null
+                table: fxquote
                 warnings: []
-                updated: '2026-03-30T13:37:44.365774085'
 
         '400':
           description: Bad request (invalid name, missing fields, or invalid types)
@@ -1015,8 +1861,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SimpleErrorResponse'
-              example:
-                error: 'table  has invalid type: partitioneddd'
+              examples:
+                invalidType:
+                  summary: Invalid table type
+                  value:
+                    error: 'table  has invalid type: partitioneddd'
+                assemblyRequired:
+                  summary: Assembly not specified
+                  value:
+                    error: assembly must be specified when the service is configured with more than one assembly
+                assemblyUnknown:
+                  summary: Unknown assembly
+                  value:
+                    error: 'unknown assembly: marketdata-emea'
         '409':
           description: Conflict (table already exists)
           content:
@@ -1028,12 +1885,44 @@ paths:
         '503': *id503
       x-codeSamples:
       - lang: Python
-        label: Python (full schema)
+        label: Python (splayed table)
+        source: |
+          session.create_table(
+              table="fxquote",
+              type="splayed",
+              columns=[
+                  {"name": "trddate", "type": "date"},
+                  {"name": "ts", "type": "timestamp"},
+                  {"name": "sym", "type": "symbol"},
+                  {"name": "bid", "type": "float"},
+                  {"name": "ask", "type": "float"},
+              ]
+          )
+      - lang: Python
+        label: Python (partitioned minimal)
         source: |
           session.create_table(
               table="fxquote",
               type="partitioned",
               prtnCol="ts",
+              columns=[
+                  {"name": "trddate", "type": "date"},
+                  {"name": "ts", "type": "timestamp"},
+                  {"name": "sym", "type": "symbol"},
+                  {"name": "bid", "type": "float"},
+                  {"name": "ask", "type": "float"},
+              ]
+          )
+      - lang: Python
+        label: Python (partitioned full)
+        source: |
+          session.create_table(
+              table="fxquote",
+              description="FX quote data",
+              type="partitioned",
+              blockSize=10000,
+              prtnCol="ts",
+              sortColsMem=["sym"],
               sortColsDisk=["sym"],
               sortColsOrd=["sym"],
               columns=[
@@ -1044,31 +1933,39 @@ paths:
                   {"name": "ask", "type": "float"},
               ]
           )
-      - lang: Python
-        label: Python (minimal schema)
-        source: |
-          session.create_table(
-              table="fxquote",
-              columns=[
-                  {"name": "trddate", "type": "date"},
-                  {"name": "ts", "type": "timestamp"},
-                  {"name": "sym", "type": "symbol"},
-                  {"name": "bid", "type": "float"},
-                  {"name": "ask", "type": "float"},
-              ]
-          )
       - lang: q
-        label: q (full schema)
+        label: q (splayed table)
         source: |
-          fxquoteCols:(`name`type!("trddate";"date");`name`type!("ts";"timestamp");`name`type`attrMem`attrDisk`attrOrd!("sym";"symbol";"grouped";"parted";"parted");`name`type!("bid";"float");`name`type!("ask";"float"));
-          session.createTable[`table`type`prtnCol`sortColsDisk`sortColsOrd`columns!("fxquote";"partitioned";"ts";enlist "sym";enlist "sym";fxquoteCols)]
+          fxquoteCols:(([name:`trddate; colType:`date]);([name:`ts; colType:`timestamp]);([name:`sym; colType:`symbol]);([name:`bid; colType:`float]);([name:`ask; colType:`float]));
+          session.createTable[([table:`fxquote; tableType:`splayed; columns:fxquoteCols])]
       - lang: q
-        label: q (minimal schema)
+        label: q (partitioned minimal)
         source: |
-          fxquoteCols:(`name`type!("trddate";"date");`name`type!("ts";"timestamp");`name`type!("sym";"symbol");`name`type!("bid";"float");`name`type!("ask";"float"));
-          session.createTable[`table`columns!("fxquote";fxquoteCols)]
+          fxquoteCols:(([name:`trddate; colType:`date]);([name:`ts; colType:`timestamp]);([name:`sym; colType:`symbol]);([name:`bid; colType:`float]);([name:`ask; colType:`float]));
+          session.createTable[([table:`fxquote; tableType:`partitioned; prtnCol:`ts; columns:fxquoteCols])]
+      - lang: q
+        label: q (partitioned full)
+        source: |
+          fxquoteCols:(([name:`trddate; colType:`date]);([name:`ts; colType:`timestamp]);([name:`sym; colType:`symbol; attrMem:`grouped; attrDisk:`parted; attrOrd:`parted]);([name:`bid; colType:`float]);([name:`ask; colType:`float]));
+          session.createTable[([table:`fxquote; description:"FX quote data"; tableType:`partitioned; blockSize:10000; prtnCol:`ts; sortColsMem:enlist`sym; sortColsDisk:enlist`sym; sortColsOrd:enlist`sym; columns:fxquoteCols])]
       - lang: cURL
-        label: cURL (full schema)
+        label: cURL (splayed table)
+        source: |
+          curl -s -X POST "http://localhost:8080/api/v0/tables/fxquote" \
+            -H "Accept: application/json" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "type": "splayed",
+              "columns": [
+                {"name": "trddate", "type": "date"},
+                {"name": "ts", "type": "timestamp"},
+                {"name": "sym", "type": "symbol"},
+                {"name": "bid", "type": "float"},
+                {"name": "ask", "type": "float"}
+              ]
+            }' | jq
+      - lang: cURL
+        label: cURL (partitioned minimal)
         source: |
           curl -s -X POST "http://localhost:8080/api/v0/tables/fxquote" \
             -H "Accept: application/json" \
@@ -1076,29 +1973,32 @@ paths:
             -d '{
               "type": "partitioned",
               "prtnCol": "ts",
+              "columns": [
+                {"name": "trddate", "type": "date"},
+                {"name": "ts", "type": "timestamp"},
+                {"name": "sym", "type": "symbol"},
+                {"name": "bid", "type": "float"},
+                {"name": "ask", "type": "float"}
+              ]
+            }' | jq
+      - lang: cURL
+        label: cURL (partitioned full)
+        source: |
+          curl -s -X POST "http://localhost:8080/api/v0/tables/fxquote" \
+            -H "Accept: application/json" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "description": "FX quote data",
+              "type": "partitioned",
+              "blockSize": 10000,
+              "prtnCol": "ts",
+              "sortColsMem": ["sym"],
               "sortColsDisk": ["sym"],
               "sortColsOrd": ["sym"],
               "columns": [
                 {"name": "trddate", "type": "date"},
                 {"name": "ts", "type": "timestamp"},
                 {"name": "sym", "type": "symbol", "attrMem": "grouped", "attrDisk": "parted", "attrOrd": "parted"},
-                {"name": "bid", "type": "float"},
-                {"name": "ask", "type": "float"}
-              ]
-            }' | jq
-
-
-      - lang: cURL
-        label: cURL (minimal schema)
-        source: |
-          curl -s -X POST "http://localhost:8080/api/v0/tables/fxquote" \
-            -H "Accept: application/json" \
-            -H "Content-Type: application/json" \
-            -d '{
-              "columns": [
-                {"name": "trddate", "type": "date"},
-                {"name": "ts", "type": "timestamp"},
-                {"name": "sym", "type": "symbol"},
                 {"name": "bid", "type": "float"},
                 {"name": "ask", "type": "float"}
               ]
@@ -1119,6 +2019,14 @@ paths:
         description: Table name
         schema:
           type: string
+      - name: assembly
+        in: query
+        required: false
+        description: Assembly whose table definition is returned. Required when DB Service is configured with more than one assembly; optional when exactly one assembly is configured.
+        schema:
+          type: string
+          minLength: 1
+        example: marketdata-emea
       responses:
         '200':
           description: Success. Table definition is returned.
@@ -1162,19 +2070,32 @@ paths:
                 $ref: '#/components/schemas/SimpleErrorResponse'
               example:
                 error: 'Unknown table: forexx'
+        '400': *idAssemblyError
         '503': *id503
       x-codeSamples:
       - lang: Python
-        label: Python
+        label: Python (single assembly)
         source: session.describe_table(table="fxquote")
+      - lang: Python
+        label: Python (specific assembly)
+        source: session.describe_table(table="fxquote", assembly="marketdata-emea")
       - lang: q
-        label: q
+        label: q (single assembly)
         source: |
           session.describeTable["fxquote"]
+      - lang: q
+        label: q (specific assembly)
+        source: |
+          session.describeTable[`table`assembly!("fxquote";"marketdata-emea")]
       - lang: cURL
-        label: cURL
+        label: cURL (single assembly)
         source: |
           curl -s -X GET "http://localhost:8080/api/v0/tables/fxquote" \
+            -H "Accept: application/json" | jq
+      - lang: cURL
+        label: cURL (specific assembly)
+        source: |
+          curl -s -X GET "http://localhost:8080/api/v0/tables/fxquote?assembly=marketdata-emea" \
             -H "Accept: application/json" | jq
     delete:
       operationId: configTableDelete
@@ -1184,49 +2105,860 @@ paths:
       - Tables
       parameters:
       - *id007
+      - name: assembly
+        in: query
+        required: false
+        description: Assembly to drop the table from. Required when DB Service is configured with more than one assembly; optional when exactly one assembly is configured.
+        schema:
+          type: string
+          minLength: 1
+        example: marketdata-emea
       responses:
-        '202':
-          description: Table drop job accepted.
+        '200':
+          description: Table dropped successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BatchIngestStatusResponse'
+                $ref: '#/components/schemas/SchemaChangeStatus'
               example:
-                name: c4ceac2c-664a-ce9c-aa5c-b1498f850d22
-                pipeline: ''
-                database: db
-                updtype: schemaChange
+                jobId: c4ceac2c-664a-ce9c-aa5c-b1498f850d22
                 status: completed
-                details: []
-                tbls: []
-                dates: []
-                progress:
-                  cmdCurrent: ''
-                  cmdIndex: 0
-                  cmdTotal: 0
-                  subCurrent: ''
-                  subIndex: 0
-                  subTotal: 0
-                error: ''
+                statusUri: /api/v0/jobs/c4ceac2c-664a-ce9c-aa5c-b1498f850d22
+                startedAt: '2026-03-31T05:36:22.900404270'
+                finishedAt: null
+                table: instruments
                 warnings: []
-                updated: '2026-03-31T05:36:22.900404270'
+        '400':
+          description: >-
+            Bad request (the table is the target of a foreign key, or the
+            assembly is missing or unknown).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorResponse'
+              examples:
+                foreignKey:
+                  summary: Table is the target of a foreign key. Drop the referencing table first.
+                  value:
+                    error: 'table is referenced by foreign keys: fxquote.sym'
+                assemblyRequired:
+                  summary: Assembly not specified
+                  value:
+                    error: assembly must be specified when the service is configured with more than one assembly
+                assemblyUnknown:
+                  summary: Unknown assembly
+                  value:
+                    error: 'unknown assembly: marketdata-emea'
         '404': *idTableNotFound
         '503': *id503
       x-codeSamples:
       - lang: Python
-        label: Python
+        label: Python (single assembly)
         source: session.drop_table(table="instruments")
+      - lang: Python
+        label: Python (specific assembly)
+        source: session.drop_table(table="instruments", assembly="marketdata-emea")
       - lang: q
-        label: q
+        label: q (single assembly)
         source: |
           session.dropTable["instruments"]
+      - lang: q
+        label: q (specific assembly)
+        source: |
+          session.dropTable[`table`assembly!("instruments";"marketdata-emea")]
       - lang: cURL
-        label: cURL
+        label: cURL (single assembly)
         source: |
           curl -s -X DELETE "http://localhost:8080/api/v0/tables/instruments" \
             -H "Accept: application/json" | jq
+      - lang: cURL
+        label: cURL (specific assembly)
+        source: |
+          curl -s -X DELETE "http://localhost:8080/api/v0/tables/instruments?assembly=marketdata-emea" \
+            -H "Accept: application/json" | jq
 components:
   schemas:
+
+    Assembly:
+      type: object
+      description: |
+        Complete assembly YAML returned by this endpoint.
+
+        An assembly is the configuration DB Service uses to run one slice of a database. It tells DB Service which tables exist, which streams carry data and control messages, where data is stored, and which Storage Manager and DAP services operate on that data.
+      properties:
+        name:
+          type: string
+          description: >-
+            Required short name that identifies this assembly. 
+            
+            Queries can use the exact name in `scope.assembly` to target this assembly directly.
+          example: db
+        description:
+          type: string
+          description: >-
+            Optional human-readable summary of the assembly's purpose or the data it contains.
+          example: DB Service assembly configuration
+        labels:
+          type: object
+          minProperties: 1
+          description: >-
+            User-defined key-value pairs that identify the subset of data held by this assembly, such as `region: US` or `sector: Finance`. 
+            
+            Use labels to divide a logical database into queryable shards and route queries to matching assemblies. 
+            
+            Each assembly must have a unique combination of label values, although individual values may be reused.
+          additionalProperties:
+            type: string
+            description: >-
+              The value assigned to a label for this assembly, such as `US`, `Finance`, or `fx`.
+          example:
+            db: db
+        tables:
+          type: object
+          minProperties: 1
+          description: >-
+            Defines the tables available in this assembly and how each table is
+            structured and stored. Each key is a table name; its value defines the
+            table's columns, storage type, partitioning, sort order, and update keys.
+            A table with the same name must use the same schema in every assembly,
+            and the database must contain at least one `partitioned` table.
+          additionalProperties:
+            type: object
+            description: >-
+              Defines a single table. The property name is the table name used when
+              publishing data and issuing queries.
+            required:
+              - type
+              - columns
+            properties:
+              description:
+                type: string
+                description: >-
+                  Optional human-readable summary of the table, including what one
+                  row represents and the type of data it contains.
+
+              type:
+                type: string
+                enum:
+                  - partitioned
+                  - splayed
+                  - basic
+                  - splayed_mem
+                description: >-
+                  Controls how the table is stored. Use `partitioned` for time-series
+                  or event data that moves through the RDB, IDB, and HDB; it requires
+                  a timestamp `prtnCol`. Use `splayed` for supplementary or reference
+                  data stored as separate column files and memory mapped across tiers.
+                  Use `basic` for supplementary or reference data stored in one file
+                  and memory mapped across tiers. Use `splayed_mem` for splayed data
+                  that should be fully loaded into memory across tiers.
+
+              blockSize:
+                type: integer
+                description: >-
+                  Number of received records to buffer before writing data to disk.
+                  Use a smaller value to reduce memory use at the cost of more frequent
+                  disk writes, or a larger value to reduce disk writes at the cost of
+                  more memory. If omitted, Storage Manager keeps received records in
+                  memory until the next end-of-interval (EOI).
+
+              prtnCol:
+                type: string
+                description: >-
+                  Name of the timestamp column used to partition the table's data by
+                  date. Required when `type` is `partitioned`; the referenced column
+                  must have type `timestamp`.
+
+              sortColsMem:
+                type: array
+                items:
+                  type: string
+                description: >-
+                  Columns used to sort data as it arrives in the in-memory RDB tier.
+                  Sorting and the `sorted` column attribute are separate; set
+                  `attrMem: sorted` on the relevant column when the sorted attribute
+                  is also required.
+
+              sortColsOrd:
+                type: array
+                items:
+                  type: string
+                description: >-
+                  Columns used to sort data as it moves into an ordinal-partitioned
+                  IDB tier. Set `attrOrd: sorted` on the relevant column when the
+                  sorted attribute is also required.
+
+              sortColsDisk:
+                type: array
+                items:
+                  type: string
+                description: >-
+                  Columns used to sort data as it moves into date-partitioned disk
+                  tiers such as the HDB. Set `attrDisk: sorted` on the relevant column
+                  when the sorted attribute is also required.
+
+              primaryKeys:
+                type: array
+                items:
+                  type: string
+                description: >-
+                  Columns that uniquely identify a row. When primary keys are set, an
+                  update with matching key values updates the existing row instead of
+                  creating another row with the same key.
+
+              isSharded:
+                type: boolean
+                description: >-
+                  Set to `true` when different assemblies contain different portions
+                  of this table. Omit it or use `false` when the table is not divided
+                  across assemblies. The value must be consistent wherever the same
+                  table is defined.
+
+              oldName:
+                type: string
+                description: >-
+                  Previous name of this table, used during a schema migration to
+                  rename existing stored data instead of creating a new table. Remove
+                  this value after the rename has completed.
+
+              columns:
+                type: array
+                description: >-
+                  Ordered list of columns in the table. The order of this list
+                  determines the column order in stored and returned table data.
+                items:
+                  type: object
+                  required:
+                    - name
+                    - type
+                  properties:
+                    name:
+                      type: string
+                      description: >-
+                        Required name of the column. It must be unique within the
+                        table. Avoid reserved q names, the names `date` and `int`,
+                        and the reserved `label_` prefix.
+
+                    description:
+                      type: string
+                      description: >-
+                        Optional human-readable explanation of the values stored in
+                        the column, including units or formatting where relevant.
+
+                    type:
+                      type: string
+                      enum:
+                        - ""
+                        - boolean
+                        - guid
+                        - byte
+                        - short
+                        - int
+                        - long
+                        - real
+                        - float
+                        - char
+                        - symbol
+                        - timestamp
+                        - month
+                        - date
+                        - datetime
+                        - timespan
+                        - minute
+                        - second
+                        - time
+                        - booleans
+                        - guids
+                        - bytes
+                        - shorts
+                        - ints
+                        - longs
+                        - reals
+                        - floats
+                        - string
+                        - symbols
+                        - timestamps
+                        - months
+                        - dates
+                        - datetimes
+                        - timespans
+                        - minutes
+                        - seconds
+                        - times
+                      description: >-
+                        Required q datatype for the column. Use singular names such
+                        as `long`, `float`, or `timestamp` for scalar values, and
+                        plural names such as `longs` or `timestamps` for vectors.
+                        Use `string` for character vectors and `symbol` for repeated
+                        text values. Prefer `timestamp` to the deprecated `datetime`
+                        type. An empty string represents mixed data, for which every
+                        value must itself be a list.
+
+                    attrMem:
+                      type: string
+                      enum:
+                        - sorted
+                        - parted
+                        - grouped
+                        - unique
+                      description: >-
+                        Query-performance attribute applied in the in-memory RDB
+                        tier. Use `sorted` for ascending data and binary-search
+                        filtering; `parted` for contiguous groups of repeated values
+                        and frequent filtering; `grouped` to index unsorted repeated
+                        values at a higher memory cost; or `unique` when every value
+                        is distinct. Omit it to use no index.
+
+                    attrOrd:
+                      type: string
+                      enum:
+                        - sorted
+                        - parted
+                        - grouped
+                        - unique
+                      description: >-
+                        Query-performance attribute applied in an ordinal-partitioned
+                        IDB tier. Use `sorted` for ascending data, `parted` for
+                        contiguous groups, `grouped` to index unsorted repeated
+                        values, or `unique` for distinct values. Both `sorted` and
+                        `parted` require the data to be sorted.
+
+                    attrDisk:
+                      type: string
+                      enum:
+                        - sorted
+                        - parted
+                        - grouped
+                        - unique
+                      description: >-
+                        Query-performance attribute applied in date-partitioned disk
+                        tiers such as the HDB and subsequent storage tiers. Use
+                        `parted` for a frequently filtered, sorted column; `sorted`
+                        for ascending values; `grouped` for unsorted repeated values;
+                        or `unique` for distinct values.
+
+                    foreign:
+                      type: string
+                      description: >-
+                        Defines this column as a foreign key to another column in the
+                        same schema. Use the form `<table>.<column>`, for example
+                        `markets.code`. Both columns must use the same datatype.
+
+                    anymap:
+                      type: boolean
+                      description: >-
+                        Set to `true` to store nested lists as a memory-mapped anymap
+                        file. This defers loading until the column is accessed and can
+                        reduce memory use.
+
+                    oldName:
+                      type: string
+                      description: >-
+                        Previous name of this column, used during a schema migration
+                        to rename existing data instead of adding a new column. Remove
+                        this value after the rename has completed.
+
+                    backfill:
+                      type: string
+                      description: >-
+                        Name of the q function used to populate this column for
+                        existing rows when the column is added. Omit it to populate
+                        existing rows with the null value for the column's datatype.
+        bus:
+          type: object
+          description: >-
+            Defines the named message streams used by database components to receive
+            data and exchange control events. Use `rt` for the standard KX Reliable
+            Transport service, `tp` to connect to a tick.q-compatible tickerplant, or
+            `custom` for a user-provided implementation of the KX bus interface.
+          additionalProperties:
+            type: object
+            description: >-
+              Configures a single stream. The property name is the stream identifier
+              referenced by other database components; common names are `internal`
+              for communication within the assembly and `external` for communication
+              with other systems.
+            required:
+              - protocol
+            properties:
+              protocol:
+                type: string
+                enum:
+                  - rt
+                  - tp
+                  - custom
+                description: >-
+                  Selects the messaging transport. Use `rt` for KX Reliable Transport,
+                  the standard option for Insights deployments; `tp` for a
+                  tick.q-compatible tickerplant; or `custom` when a package provides
+                  its own implementation of the KX bus publish and subscribe interface.
+
+              topic:
+                type: string
+                description: >-
+                  Identifies the topic used by this stream. For an `rt` stream, the
+                  effective topic name is prefixed with the assembly name, for example
+                  `<assembly-name>-<topic>`.
+
+              nodes:
+                type: array
+                items:
+                  type: string
+                description: >-
+                  Lists the host and port connection strings for the stream nodes.
+                  For `rt`, the nodes and topic identify the Reliable Transport service.
+                  For `tp`, only the first node in the list is used.
+        mounts:
+          type: object
+          description: >-
+            Defines the named storage locations and partition layouts used as data moves through the database's real-time, intraday, and historical tiers.
+            Each key is a mount name referenced by a Storage Manager tier, for example by `elements.sm.tiers[].mount`.
+          additionalProperties:
+            type: object
+            description: >-
+              Configures one storage mount. The property name is its identifier; common names are `rdb`, `idb`, and `hdb`, although names are user-defined.
+            required:
+              - type
+              - partition
+              - baseURI
+            properties:
+              type:
+                type: string
+                enum:
+                  - stream
+                  - local
+                description: >-
+                  Selects where the data is held. Use `stream` for in-flight, real-time data such as an RDB tier; it does not use filesystem storage. 
+                  Use `local` for data persisted to a filesystem, typically for IDB and HDB tiers.
+
+              partition:
+                type: string
+                enum:
+                  - none
+                  - ordinal
+                  - date
+                description: >-
+                  Controls how data is divided within the mount. 
+                  Use `none` with a `stream` mount because no disk partitions are created. 
+                  Use `ordinal` with a `local` mount for temporary, numbered partitions created at intervals defined by the tier schedule, typically for an IDB; 
+                  these partitions reset when data rolls to the next tier. 
+                  Use `date` with a `local` mount to organize historical data by the date from each table's timestamp `prtnCol`, typically for an HDB.
+
+              baseURI:
+                type: string
+                description: >-
+                  Root storage location for the mount. 
+                  Set this to the literal `none` for a `stream` mount. 
+                  For a `local` mount, specify a writable absolute file URI such as `file:///data/db/hdb`. 
+                  Each local mount must use a unique path, and the Storage Manager owns and manages all content beneath it.
+        elements:
+          type: object
+          description: >-
+            Configures the services that run as part of this assembly. Use `sm` to
+            receive, store, and move data through storage tiers; `dap` to make mounted
+            data available for queries; `sp` for Stream Processor pipelines; and `rt`
+            for the assembly's stream service.
+          properties:
+            sm:
+              type: object
+              description: >-
+                Configures the Storage Manager, which receives data from a bus stream,
+                writes it to storage, and moves it through the configured tiers from
+                newest to oldest.
+              required:
+                - source
+                - tiers
+              properties:
+                source:
+                  type: string
+                  description: >-
+                    Required name of the `bus` entry from which the Storage Manager
+                    receives data and database control events.
+
+                initialImport:
+                  type: boolean
+                  description: >-
+                    Set to `true` only when starting from an existing kdb+ database.
+                    The Storage Manager requires a database under the `data`
+                    subdirectory of the HDB mount's `baseURI` and terminates if none is
+                    found. Remove this setting after the first successful startup.
+
+                enforceSchema:
+                  type: boolean
+                  default: false
+                  description: >-
+                    Validates incoming data against the configured table schemas.
+                    Invalid data is logged and discarded. Use this while developing or
+                    validating schemas; it adds ingestion overhead. Schema enforcement
+                    must also be enabled under `dap`.
+
+                disableDiscovery:
+                  type: boolean
+                  description: >-
+                    Disables service discovery. Use this only when running the
+                    database as a standalone microservice without a discovery service.
+
+                chunkSize:
+                  type: integer
+                  default: 500000
+                  description: >-
+                    Maximum number of records written to disk at once during an EOI or
+                    EOD operation. Increase it for higher writedown throughput at the
+                    cost of additional memory, or reduce it to limit memory use.
+
+                sortLimitGB:
+                  type: integer
+                  default: 10
+                  description: >-
+                    Maximum number of gigabytes used for table data during a sort.
+                    Data exceeding this limit is processed in chunks. Sort columns
+                    must still fit fully in memory.
+
+                waitTm:
+                  type: integer
+                  default: 250
+                  description: >-
+                    Number of milliseconds to wait between attempts to reconnect to
+                    another database process.
+
+                eodPeachLevel:
+                  type: array
+                  description: >-
+                    Selects how EOD writes are parallelized. Use `part` to write
+                    partitions in parallel, `table` to write tables in parallel, or
+                    `column` to write columns within each table in parallel. Although
+                    multiple values may be supplied, only the highest configured level
+                    provides a performance benefit in KX 1.19. Column-level
+                    parallelism is used by default.
+                  items:
+                    type: string
+                    enum:
+                      - part
+                      - table
+                      - column
+
+                reloadTimeout:
+                  type: string
+                  description: >-
+                    Maximum time the Storage Manager waits for DAPs and other clients
+                    to reload their data purviews after a writedown. Specify a q
+                    timespan such as `0D01:00:00`. It defaults to the EOI interval.
+
+                idbUsed:
+                  type: boolean
+                  default: true
+                  description: >-
+                    Indicates whether a DAP serves an ordinal IDB mount. Set to `false`
+                    when no IDB DAP exists; the Storage Manager then treats the RDB as
+                    covering the period since the previous EOD.
+
+                tiers:
+                  type: array
+                  minItems: 1
+                  description: >-
+                    Ordered storage tiers through which data moves, from the newest
+                    data to the oldest. A typical configuration uses an in-memory RDB,
+                    an ordinal IDB, and a date-partitioned HDB.
+                  items:
+                    type: object
+                    required:
+                      - name
+                      - mount
+                    properties:
+                      name:
+                        type: string
+                        description: >-
+                          Required unique name for the tier. It identifies the tier in
+                          logs and operational messages.
+
+                      mount:
+                        type: string
+                        description: >-
+                          Required name of the `mounts` entry that determines where
+                          and how this tier stores its data.
+
+                      store:
+                        type: string
+                        description: >-
+                          Physical URI used by this tier. Usually omit it to use
+                          `none` for a stream mount or `<baseURI>/data` for a local
+                          mount. Set it explicitly for object storage or when multiple
+                          tiers use the same mount. For an ordinal local mount, an
+                          explicit value is ignored.
+
+                      schedule:
+                        type: object
+                        description: >-
+                          Controls when data is rolled into this tier or moved to the
+                          next tier.
+                        properties:
+                          freq:
+                            type: string
+                            description: >-
+                              Length of each rollover interval, expressed as a q
+                              duration such as `0D00:10:00`. For an ordinal IDB, this
+                              determines how often a new ordinal partition is created.
+                              The default IDB interval is ten minutes.
+
+                          offset:
+                            type: string
+                            description: >-
+                              Delays the interval schedule by the specified duration.
+                              Use it to stagger EOI processing across Storage Managers
+                              and reduce simultaneous resource usage. It must be less
+                              than `freq` and defaults to `00:00:00`.
+
+                          snap:
+                            type: string
+                            description: >-
+                              Time of day at which data is moved into a date-partitioned
+                              HDB tier. A value shortly after midnight provides a grace
+                              period for data belonging to the previous date. Defaults
+                              to `00:00:00`.
+
+                      retain:
+                        type: object
+                        minProperties: 1
+                        description: >-
+                          Defines when data leaves this tier and rolls into the next
+                          one. When both time and size limits are supplied, rollover
+                          occurs when either limit is reached. Retention policies
+                          cannot be used on ordinal-mounted tiers.
+                        properties:
+                          time:
+                            type: string
+                            description: >-
+                              Maximum age of data in the tier, such as `2 Days`. Use
+                              Years, Months, Weeks, or Days for a local date tier, and
+                              Hours, Minutes, or Seconds for a stream tier.
+
+                          sizePct:
+                            type: integer
+                            minimum: 1
+                            maximum: 100
+                            description: >-
+                              Maximum percentage of the mount's storage that this tier
+                              may use before data is rolled over. This option applies
+                              only to local, date-partitioned tiers.
+
+                      compression:
+                        type: object
+                        description: >-
+                          Configures compression for data written to a local,
+                          date-partitioned tier. Use `none` to avoid compression
+                          overhead, or select another algorithm to reduce storage use.
+                        required:
+                          - algorithm
+                        properties:
+                          algorithm:
+                            type: string
+                            enum:
+                              - none
+                              - qipc
+                              - gzip
+                              - snappy
+                              - lz4hc
+                              - zstd
+                            description: >-
+                              Compression algorithm. Use `none` for no compression, `qipc`
+                              for native q IPC compression, `snappy` when write and
+                              read speed are preferred, or `gzip`, `lz4hc`, or `zstd`
+                              when stronger or more configurable compression is
+                              required.
+
+                          block:
+                            type: integer
+                            minimum: 12
+                            maximum: 20
+                            description: >-
+                              Compression block-size setting. Supply a value from 12
+                              to 20 for every algorithm except `none`.
+
+                          level:
+                            type: integer
+                            description: >-
+                              Algorithm-specific compression level: `0` for `qipc` or
+                              `snappy`, `0` to `9` for `gzip`, `1` to `12` for
+                              `lz4hc`, or `-7` to `22` for `zstd`. Higher levels
+                              generally trade additional CPU time for smaller data.
+
+                      inventory:
+                        type: object
+                        description: >-
+                          Creates an inventory file for an object-storage tier. Use
+                          this to speed up later Storage Manager and DAP reloads. It
+                          has no effect when `store` is not an object-storage URI.
+                        properties:
+                          enabled:
+                            type: boolean
+                            default: false
+                            description: >-
+                              Enables creation and use of the inventory file. A
+                              `location` must also be supplied when this is `true`.
+
+                          location:
+                            type: string
+                            description: >-
+                              Path of the inventory file relative to the root of the
+                              object-storage bucket, for example
+                              `inventory/database-inventory.tgz`.
+
+                      index:
+                        type: integer
+                        default: 0
+                        description: >-
+                          Controls the order of multiple HDB tiers. Lower values are
+                          processed first; tiers with the same value retain their
+                          order in the `tiers` list.
+
+            dap:
+              type: object
+              description: >-
+                Configures the Data Access Processes that expose mounted database
+                tiers to the query system. Configure one DAP per mount for independent
+                scaling, or one DAP with multiple mounts to scale all tiers together.
+              required:
+                - instances
+              properties:
+                enforceSchema:
+                  type: boolean
+                  default: false
+                  description: >-
+                    Enables schema enforcement for all DAP instances. Enable the same
+                    setting under `sm` for end-to-end enforcement.
+
+                lateData:
+                  type: boolean
+                  default: false
+                  description: >-
+                    Enables late and out-of-order data handling for all DAP instances.
+                    DAPs then subscribe to the stream and retain records relevant to
+                    their temporal purviews. The Storage Manager must also be started
+                    with `KXI_LATE_DATA=true`.
+
+                instances:
+                  type: object
+                  minProperties: 1
+                  description: >-
+                    Defines the DAP configurations in this assembly. Each key is a DAP
+                    name, commonly `rdb`, `idb`, or `hdb` for independently scaled
+                    tiers, or `db` for a single DAP serving all tiers.
+                  additionalProperties:
+                    type: object
+                    description: >-
+                      Configures one DAP. Supply exactly one of `mountName` or
+                      `mountList`.
+                    oneOf:
+                      - required:
+                          - mountName
+                      - required:
+                          - mountList
+                    properties:
+                      mountName:
+                        type: string
+                        description: >-
+                          Name of the single mount served by this DAP. Use this mode
+                          when each tier needs its own container, resources, or scaling
+                          level.
+
+                      mountList:
+                        type: array
+                        minItems: 1
+                        uniqueItems: true
+                        description: >-
+                          Names of all mounts served by this DAP. Use this mode when
+                          RDB, IDB, and HDB tiers should share resources and scale
+                          together as a single DAP.
+                        items:
+                          type: string
+
+                      pctMemThreshold:
+                        type: number
+                        format: double
+                        minimum: 0
+                        maximum: 1
+                        description: >-
+                          Fraction of the DAP's memory limit at which it flushes its
+                          cache and enters low-memory mode. Use a lower value for more
+                          memory headroom or a higher value to retain a larger cache.
+
+                      enforceSchema:
+                        type: boolean
+                        default: false
+                        description: >-
+                          Enables schema enforcement for this DAP only. The Storage
+                          Manager's `enforceSchema` setting must also be enabled.
+
+                      lateData:
+                        type: boolean
+                        default: false
+                        description: >-
+                          Enables late and out-of-order data handling for this DAP.
+                          Use the parent `dap.lateData` field instead when all DAPs
+                          require the same setting. The Storage Manager must also use
+                          `KXI_LATE_DATA=true`.
+
+            sp:
+              type: object
+              description: >-
+                Configures Stream Processor pipelines deployed as part of the
+                assembly. Use this when the assembly itself ingests or transforms data;
+                omit it when pipelines are deployed separately.
+              additionalProperties: true
+
+            rt:
+              type: object
+              description: >-
+                Configures the stream service deployed as part of the assembly. Use
+                this when the assembly owns its Reliable Transport deployment.
+                Database connection details such as protocol, topic, and nodes remain
+                under `bus`.
+              additionalProperties: true
+        dbSettings:
+          type: object
+          description: >-
+            Applies settings to the database as a whole. In Insights 1.19, use this
+            section to control encryption of all table data across every storage tier.
+          properties:
+            encryption:
+              type: object
+              description: >-
+                Controls encryption of database data at rest. Enable it when stored
+                database files must be encrypted. Encryption is independent of the
+                compression configured for each storage tier.
+              properties:
+                encryptAll:
+                  type: boolean
+                  default: false
+                  description: >-
+                    Set to `true` to encrypt every table in every storage tier. Leave
+                    as `false` for unencrypted storage. Changing this from `true` to
+                    `false`, or removing it after encryption was enabled, decrypts the
+                    database. When enabled, `KXI_ENCRYPTION_KEY_FILE` and
+                    `KXI_ENCRYPTION_PASSWORD` must be configured for every Storage
+                    Manager and DAP container.
+        overrides:
+          type: object
+          description: >-
+            Defines named variations of the base assembly configuration, allowing
+            shared configuration to remain in one file. Each override contains only
+            the settings to add or replace. Select overrides using
+            `KXI_ASSEMBLY_OVERRIDES`; when several are selected, they are applied in
+            order and later overrides take precedence over earlier ones.
+          additionalProperties:
+            type: object
+            description: >-
+              A named partial assembly configuration. Include only the sections and
+              values that differ from the base configuration, such as changes to
+              `tables`, `mounts`, `bus`, `elements`, or `dbSettings`.
+            additionalProperties: true
+      required:
+      - name
+      - tables
+      - bus
+      - mounts
+      - elements
+      additionalProperties: true
 
     TableSpec:
       type: object
@@ -1296,6 +3028,17 @@ components:
       properties:
         type:
           type: string
+          description: |
+            The table type.
+          enum:
+          - partitioned
+          - splayed
+          - splayed_mem
+          - basic
+        tableType:
+          type: string
+          description: |
+            Alias for `type`, provided for convenience in the q client: `type` cannot be used as a key in compact dict syntax. If both `type` and `tableType` are given, `type` takes precedence; otherwise `tableType` is normalised to `type` server-side before the schema is applied.
           enum:
           - partitioned
           - splayed
@@ -1312,7 +3055,6 @@ components:
 
         columns:
           type: array
-          description: Column definitions for the table. Expand for field details.
           items:
             $ref: '#/components/schemas/TableColumnSpec'
         primaryKeys:
@@ -1379,6 +3121,11 @@ components:
 
             Mixed types (KDB-X types of `0h`) are also supported by supplying an empty type, i.e. `"type": ""`. **NOTE** that due to the way KDB-X handles lists, inserting a non-list value as the first value of a table will corrupt the schema - ensure all values inserted into the column are lists.
           example: symbol
+        colType:
+          type: string
+          description: |
+            Alias for the column `type`, provided for convenience in the q client: `type` cannot be used as a key in compact dict syntax. If both `type` and `colType` are given, `type` takes precedence; otherwise `colType` is normalised to `type` server-side.
+          example: symbol
         description:
           type: string
           description: Optional textual description of the column for documentation purposes.
@@ -1395,10 +3142,17 @@ components:
           type: string
           description: Column attribute to apply on disk partitions (typically HDB tier). See [attribute details](https://code.kx.com/insights/microservices/database/configuration/assembly/schema.html#attributes).
           example: parted
-        # foreign:
-        #   type: string
-        #   description: Optional foreign-key reference in `table.column` form. If provided, this column type should match the referenced column type.
-        #   example: instruments.sym
+        foreign:
+          type: string
+          description: >-
+            Defines this column as a foreign key to another column in the same
+            schema. Use the form `<table>.<column>`, for example
+            `instruments.sym`. Both columns must use the same datatype, and the
+            referenced column must be a primary key of the referenced table (see
+            `primaryKeys`). Queries can then select, group by and filter on
+            columns of the referenced table using the same `table.column`
+            notation.
+          example: instruments.sym
         # anymap:
         #   type: boolean
         #   description: Indicates if nested data can be stored as a memory-mapped anymap file. Compression is not currently supported for anymap columns.
@@ -1557,6 +3311,53 @@ components:
         required:
         - data
 
+    SchemaChangeStatus:
+      type: object
+      additionalProperties: false
+      description: >-
+        Result of a table create or delete operation. These operations are
+        synchronous: the response is returned once the schema change has
+        completed.
+      properties:
+        jobId:
+          type: string
+          description: Identifier of the schema change job.
+        status:
+          type: string
+          description: Status of the schema change. One of pending, processing, completed, errored.
+        statusUri:
+          type: string
+          format: uri-reference
+          description: Relative URI of the job status resource for this schema change.
+        startedAt:
+          type: string
+          format: date-time
+          description: Time the job started.
+        finishedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Time the job finished. Null while the job is still in progress.
+        table:
+          type: string
+          description: Name of the table affected by the schema change.
+        error:
+          type: string
+          description: If the schema change errored, an error message describing the failure.
+        warnings:
+          type: array
+          items:
+            type: string
+          description: Warnings raised by the schema change. Empty unless the job completed with warnings.
+      required:
+      - jobId
+      - status
+      - statusUri
+      - startedAt
+      - finishedAt
+      - table
+      - warnings
+
     DataIngestResponse:
       allOf:
       - $ref: '#/components/schemas/SuccessEnvelope'
@@ -1609,6 +3410,95 @@ components:
             additionalProperties: false
         required:
         - data
+
+    BatchImportStatusResponse:
+      type: object
+      properties:
+        jobId:
+          type: string
+          description: Unique identifier for the import job.
+        database:
+          type: string
+          description: Target database where the import job is applied.
+        jobType:
+          type: string
+          description: Type of job being performed.
+          enum:
+          - import
+          - delete
+        status:
+          type: string
+          description: Current state of the job, for example `pending`, `processing`, `completed`, `errored`, or `canceled`.
+        affectedTables:
+          type: array
+          items:
+            type: string
+          description: Tables affected by the import job.
+        processedPartitions:
+          type: array
+          items:
+            type: string
+            format: date
+          description: Date partitions that the import job has reached so far.
+        progress:
+          type: object
+          description: Progress information for import processing.
+          properties:
+            currentPartition:
+              type: string
+              description: Current partition being processed.
+            partitionIndex:
+              type: integer
+              nullable: true
+              description: Zero-based index of the current date partition.
+            partitionTotal:
+              type: integer
+              nullable: true
+              description: Total number of date partitions in the import job.
+            currentTable:
+              type: string
+              description: Current table being processed within the current partition.
+            tableIndex:
+              type: integer
+              nullable: true
+              description: Zero-based index of the current table within the current partition.
+            tableTotal:
+              type: integer
+              nullable: true
+              description: Total number of tables in the current partition.
+          required:
+          - currentPartition
+          - partitionIndex
+          - partitionTotal
+          - currentTable
+          - tableIndex
+          - tableTotal
+          additionalProperties: false
+        error:
+          type: string
+          description: Error message returned if the job fails.
+        warnings:
+          type: array
+          items:
+            type: string
+          description: Non-fatal warnings generated while processing the job.
+        updated:
+          type: string
+          format: date-time
+          description: Timestamp of the most recent status update for this job.
+      required:
+      - jobId
+      - database
+      - jobType
+      - status
+      - affectedTables
+      - processedPartitions
+      - progress
+      - error
+      - warnings
+      - updated
+      additionalProperties: false
+
 
     BatchIngestStatusResponse:
       type: object
@@ -1846,19 +3736,15 @@ components:
             A dictionary of data transforms, made up of column names as keys and q expression strings as values.
 
 
-            Existing columns can be modified, and new ones created. 
+            Existing columns can be modified, and new ones created.
             
-            Columns from the file are available for use in the expression via a `data` dictionary variable, and the file name is available via a `path` string variable. For example: 
-            
-            ``{'timestamp': 'data[`date]+data[`time]'}``
-            
+            Columns from the file are available for use in the expression via a `data` dictionary variable, and the file name is available via a `path` string variable. For example:
+
+            ``{'time':'data[`date] + data`time'}``
+
             Runs after loading and parsing (including typecasting) of data in the file is done.
 
-            Note that columns used as inputs in the transform are by default not included after use, therefore must be re-added if they are required. 
-            
-            For example, to preserve the date column in the above, the `postparse` dictionary should be:
-
-            ``{'timestamp':'data[`date]+data[`time]','date':'data[`date]'}``
+            When ingesting into an existing table, the final output columns must be compatible with the target table schema.
 
         headerRowIndex:
           type: integer
@@ -1926,6 +3812,38 @@ components:
         types:
           type: string
           description: Optional type string (case-sensitive), e.g. f=float, j=long, p=timestamp, s=symbol, C=string, *=generic list. See https://code.kx.com/q/ref/cast/ for full details.
+
+    DeleteRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - table
+        - filter
+      properties:
+        table:
+          type: string
+          description: Table to delete rows from.
+        startTS:
+          type: string
+          description: >-
+            Inclusive start of the deletion window. Defaults to the beginning of time. Same
+            formats as query startTS. Must begin after any data held in an object storage
+            tier - a window overlapping object storage is rejected. Ignored for a table that
+            is not partitioned.
+        endTS:
+          type: string
+          description: >-
+            Exclusive end of the deletion window. Defaults to the end of time. May reach into
+            the interval currently being ingested: rows already ingested are deleted from the
+            in-memory tiers, and rows arriving after the delete executes are kept. Ignored for
+            a table that is not partitioned.
+        filter:
+          type: array
+          items: {}
+          description: >-
+            List of filter triples, same syntax as the structured-query filter. An explicit
+            empty list ([]) deletes all rows in the time window, and is mandatory as a safety
+            catch even when no filtering is desired.
 
     StructuredRequest:
       type: object
@@ -2058,6 +3976,10 @@ components:
           items:
             type: integer
             x-kx-type: -6h
+        scope:
+          $ref: '#/components/schemas/ScopeObject'
+        labels:
+          $ref: '#/components/schemas/LabelsObject'
       required:
       - table
 
@@ -2212,6 +4134,8 @@ components:
         query:
           type: string
           description: SQL expression. Must be a `SELECT`. No `INSERT`, `DROP`, or other extension is allowed.
+        scope:
+          $ref: '#/components/schemas/ScopeObject'
       required:
       - query
 
@@ -2233,8 +4157,62 @@ components:
 
             - A unary lambda, for example `"{distinct raze x}"`.
 
+        scope:
+          $ref: '#/components/schemas/ScopeObject'
+        labels:
+          $ref: '#/components/schemas/LabelsObject'
       required:
       - query
+
+    PreviewRequest:
+      type: object
+      properties:
+        table:
+          type: string
+          description: Table name
+          x-kx-type: -11h
+        startTS:
+          description: |
+            Inclusive start of timestamp range. Optional; defaults to the full temporal range of the database. The timestamp must be midnight so the date range covers full days.
+          type: string
+          x-kx-type: -12h
+        endTS:
+          description: |
+            Exclusive end of timestamp range. Optional; defaults to the full temporal range of the database. The timestamp must be midnight so the date range covers full days.
+          type: string
+          x-kx-type: -12h
+        limit:
+          description: Maximum number of rows to return. Defaults to 1000.
+          type: integer
+          x-kx-type: -7h
+        scope:
+          $ref: '#/components/schemas/ScopeObject'
+        labels:
+          $ref: '#/components/schemas/LabelsObject'
+      required:
+      - table
+
+    ScopeObject:
+      type: object
+      description: Query routing selector.
+      properties:
+        assembly:
+          type: string
+          description: Single assembly to target.
+          example: marketdata-emea
+      additionalProperties:
+        type: string
+      example:
+        assembly: marketdata-emea
+
+    LabelsObject:
+      type: object
+      description: User-defined assembly labels to target.
+      additionalProperties:
+        type: string
+      example:
+        region: emea
+        assetClass: fx
 
     ListTablesResponse:
       allOf:

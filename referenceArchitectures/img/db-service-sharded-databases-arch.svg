@@ -1,0 +1,171 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760" role="img" aria-labelledby="title desc">
+  <title id="title">DB Service sharded databases on Kubernetes</title>
+  <desc id="desc">One shared DB Service gateway routes API and query requests across four DB Service database shards. Streaming ingest clients publish directly to the target shard RT stream.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#263238"/>
+    </marker>
+    <marker id="green-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#4d6b4d"/>
+    </marker>
+    <style>
+      text { font-family: Arial, Helvetica, sans-serif; fill: #17202a; }
+      .title { font-size: 30px; font-weight: 700; fill: #102033; }
+      .subtitle { font-size: 15px; fill: #45525f; }
+      .heading { font-size: 19px; font-weight: 700; }
+      .small { font-size: 13px; fill: #45525f; }
+      .mono { font-size: 12px; }
+      .box { fill: #fff; stroke: #8393a5; stroke-width: 2; rx: 14; }
+      .client { fill: #fff; stroke: #6c7a89; stroke-width: 2; rx: 14; }
+      .gateway { fill: #d7e8ff; stroke: #2f5f98; stroke-width: 2; rx: 14; }
+      .api { fill: #fff; stroke: #2f5f98; stroke-width: 1.5; rx: 8; }
+      .rt { fill: #dff4e5; stroke: #2d7a45; stroke-width: 1.5; rx: 8; }
+      .da { fill: #fff1cc; stroke: #9b6b00; stroke-width: 1.5; rx: 8; }
+      .sm { fill: #ffe1e1; stroke: #9a3d3d; stroke-width: 1.5; rx: 8; }
+      .meta { fill: #f4f6f8; stroke: #aab4bf; stroke-width: 1.2; rx: 8; }
+      .arrow { stroke: #263238; stroke-width: 3; fill: none; marker-end: url(#arrow); }
+      .ingest-arrow { stroke: #4d6b4d; stroke-width: 2.5; fill: none; marker-end: url(#green-arrow); }
+    </style>
+  </defs>
+
+  <rect width="1200" height="760" fill="#f7f9fb"/>
+  <text x="600" y="48" text-anchor="middle" class="title">DB Service sharded databases on Kubernetes</text>
+  <text x="64" y="78" class="subtitle">One shared gateway routes API/query requests across four DB Service database shards.</text>
+
+  <rect x="54" y="138" width="171" height="100" class="client"/>
+  <text x="68" y="169" class="heading">Clients</text>
+  <rect x="80" y="185" width="119" height="33" class="meta"/>
+  <text x="139.5" y="207" text-anchor="middle" class="small">Query clients</text>
+
+  <rect x="54" y="426" width="171" height="120" class="client"/>
+  <text x="68" y="457" class="heading">Ingest clients</text>
+  <rect x="78" y="476" width="124" height="34" class="meta"/>
+  <text x="140" y="498" text-anchor="middle" class="small">Streaming ingest</text>
+
+  <rect x="305" y="116" width="305" height="172" class="gateway"/>
+  <text x="319" y="148" class="heading" fill="#2f5f98">Shared DB Service gateway</text>
+  <rect x="335" y="166" width="245" height="33" class="api"/>
+  <text x="457.5" y="188" text-anchor="middle" class="small">Service Gateway (HTTP API)</text>
+  <rect x="335" y="211" width="125" height="33" class="api"/>
+  <text x="397.5" y="233" text-anchor="middle" class="small">Aggregator</text>
+  <rect x="475" y="211" width="105" height="33" class="api"/>
+  <text x="527.5" y="225" text-anchor="middle" class="small">Resource</text>
+  <text x="527.5" y="239" text-anchor="middle" class="small">Coordinator</text>
+
+  <path d="M225 190 L305 190" class="arrow"/>
+  <text x="246" y="160" class="small">API/query</text>
+  <text x="622" y="133" class="small">routes by table</text>
+  <text x="622" y="149" class="small">and labels</text>
+
+  <g id="shard-equities-nasdaq" transform="translate(730 104)">
+    <rect width="382" height="124" class="box"/>
+    <text x="14" y="31" class="heading">equities NASDAQ shard</text>
+    <rect x="22" y="48" width="104" height="34" class="rt"/>
+    <text x="74" y="70" text-anchor="middle" class="small">RT stream</text>
+    <rect x="151" y="48" width="104" height="34" class="da"/>
+    <text x="203" y="70" text-anchor="middle" class="small">Data Access</text>
+    <rect x="280" y="48" width="82" height="34" class="sm"/>
+    <text x="321" y="62" text-anchor="middle" class="mono">Storage</text>
+    <text x="321" y="76" text-anchor="middle" class="mono">Manager</text>
+    <rect x="151" y="88" width="211" height="24" class="meta"/>
+    <text x="256.5" y="99" text-anchor="middle" class="mono">eq_trade, assetClass=equities</text>
+    <text x="256.5" y="111" text-anchor="middle" class="mono">exchange=nasdaq</text>
+    <path d="M126 65 L151 65" class="arrow"/>
+    <path d="M255 65 L280 65" class="arrow"/>
+    <path d="M362 65 L376 65" class="arrow"/>
+    <ellipse cx="396" cy="42" rx="18" ry="7" fill="#fff" stroke="#7b8794" stroke-width="2"/>
+    <path d="M378 42 L378 85" stroke="#7b8794" stroke-width="2" fill="#fff"/>
+    <path d="M414 42 L414 85" stroke="#7b8794" stroke-width="2" fill="#fff"/>
+    <ellipse cx="396" cy="85" rx="18" ry="7" fill="#fff" stroke="#7b8794" stroke-width="2"/>
+  </g>
+
+  <g id="shard-equities-nyse" transform="translate(730 268)">
+    <rect width="382" height="124" class="box"/>
+    <text x="14" y="31" class="heading">equities NYSE shard</text>
+    <rect x="22" y="48" width="104" height="34" class="rt"/>
+    <text x="74" y="70" text-anchor="middle" class="small">RT stream</text>
+    <rect x="151" y="48" width="104" height="34" class="da"/>
+    <text x="203" y="70" text-anchor="middle" class="small">Data Access</text>
+    <rect x="280" y="48" width="82" height="34" class="sm"/>
+    <text x="321" y="62" text-anchor="middle" class="mono">Storage</text>
+    <text x="321" y="76" text-anchor="middle" class="mono">Manager</text>
+    <rect x="151" y="88" width="211" height="24" class="meta"/>
+    <text x="256.5" y="99" text-anchor="middle" class="mono">eq_trade, assetClass=equities</text>
+    <text x="256.5" y="111" text-anchor="middle" class="mono">exchange=nyse</text>
+    <path d="M126 65 L151 65" class="arrow"/>
+    <path d="M255 65 L280 65" class="arrow"/>
+    <path d="M362 65 L376 65" class="arrow"/>
+    <ellipse cx="396" cy="42" rx="18" ry="7" fill="#fff" stroke="#7b8794" stroke-width="2"/>
+    <path d="M378 42 L378 85" stroke="#7b8794" stroke-width="2" fill="#fff"/>
+    <path d="M414 42 L414 85" stroke="#7b8794" stroke-width="2" fill="#fff"/>
+    <ellipse cx="396" cy="85" rx="18" ry="7" fill="#fff" stroke="#7b8794" stroke-width="2"/>
+  </g>
+
+  <g id="shard-fx-emea" transform="translate(730 432)">
+    <rect width="382" height="124" class="box"/>
+    <text x="14" y="31" class="heading">FX EMEA shard</text>
+    <rect x="22" y="48" width="104" height="34" class="rt"/>
+    <text x="74" y="70" text-anchor="middle" class="small">RT stream</text>
+    <rect x="151" y="48" width="104" height="34" class="da"/>
+    <text x="203" y="70" text-anchor="middle" class="small">Data Access</text>
+    <rect x="280" y="48" width="82" height="34" class="sm"/>
+    <text x="321" y="62" text-anchor="middle" class="mono">Storage</text>
+    <text x="321" y="76" text-anchor="middle" class="mono">Manager</text>
+    <rect x="151" y="88" width="211" height="24" class="meta"/>
+    <text x="256.5" y="99" text-anchor="middle" class="mono">fx_trade, assetClass=fx</text>
+    <text x="256.5" y="111" text-anchor="middle" class="mono">region=emea</text>
+    <path d="M126 65 L151 65" class="arrow"/>
+    <path d="M255 65 L280 65" class="arrow"/>
+    <path d="M362 65 L376 65" class="arrow"/>
+    <ellipse cx="396" cy="42" rx="18" ry="7" fill="#fff" stroke="#7b8794" stroke-width="2"/>
+    <path d="M378 42 L378 85" stroke="#7b8794" stroke-width="2" fill="#fff"/>
+    <path d="M414 42 L414 85" stroke="#7b8794" stroke-width="2" fill="#fff"/>
+    <ellipse cx="396" cy="85" rx="18" ry="7" fill="#fff" stroke="#7b8794" stroke-width="2"/>
+  </g>
+
+  <g id="shard-fx-americas" transform="translate(730 596)">
+    <rect width="382" height="124" class="box"/>
+    <text x="14" y="31" class="heading">FX Americas shard</text>
+    <rect x="22" y="48" width="104" height="34" class="rt"/>
+    <text x="74" y="70" text-anchor="middle" class="small">RT stream</text>
+    <rect x="151" y="48" width="104" height="34" class="da"/>
+    <text x="203" y="70" text-anchor="middle" class="small">Data Access</text>
+    <rect x="280" y="48" width="82" height="34" class="sm"/>
+    <text x="321" y="62" text-anchor="middle" class="mono">Storage</text>
+    <text x="321" y="76" text-anchor="middle" class="mono">Manager</text>
+    <rect x="151" y="88" width="211" height="24" class="meta"/>
+    <text x="256.5" y="99" text-anchor="middle" class="mono">fx_trade, assetClass=fx</text>
+    <text x="256.5" y="111" text-anchor="middle" class="mono">region=americas</text>
+    <path d="M126 65 L151 65" class="arrow"/>
+    <path d="M255 65 L280 65" class="arrow"/>
+    <path d="M362 65 L376 65" class="arrow"/>
+    <ellipse cx="396" cy="42" rx="18" ry="7" fill="#fff" stroke="#7b8794" stroke-width="2"/>
+    <path d="M378 42 L378 85" stroke="#7b8794" stroke-width="2" fill="#fff"/>
+    <path d="M414 42 L414 85" stroke="#7b8794" stroke-width="2" fill="#fff"/>
+    <ellipse cx="396" cy="85" rx="18" ry="7" fill="#fff" stroke="#7b8794" stroke-width="2"/>
+  </g>
+
+  <path d="M610 190 L730 166" class="arrow"/>
+  <path d="M610 198 L730 330" class="arrow"/>
+  <path d="M610 206 L730 494" class="arrow"/>
+  <path d="M610 214 L730 658" class="arrow"/>
+
+  <path d="M225 486 C360 450 520 205 752 169" class="ingest-arrow"/>
+  <path d="M225 486 C385 462 548 348 752 333" class="ingest-arrow"/>
+  <path d="M225 486 C385 492 548 500 752 497" class="ingest-arrow"/>
+  <path d="M225 486 C360 540 520 632 752 661" class="ingest-arrow"/>
+  <text x="250" y="524" class="small">publish to the target shard RT stream</text>
+
+  <rect x="64" y="683" width="106" height="33" class="api"/>
+  <text x="117" y="705" text-anchor="middle" class="small">DB Service API</text>
+  <rect x="188" y="683" width="106" height="33" class="rt"/>
+  <text x="241" y="705" text-anchor="middle" class="small">RT stream</text>
+  <rect x="312" y="683" width="118" height="33" class="da"/>
+  <text x="371" y="705" text-anchor="middle" class="small">DB Service DA</text>
+  <rect x="448" y="683" width="138" height="33" class="sm"/>
+  <text x="517" y="705" text-anchor="middle" class="small">DB Service SM</text>
+  <rect x="604" y="683" width="100" height="33" class="box"/>
+  <text x="654" y="705" text-anchor="middle" class="small">Storage</text>
+
+  <text x="64" y="740" class="small">Data is published with DB Service import/streaming ingest and queried through the shared gateway.</text>
+</svg>

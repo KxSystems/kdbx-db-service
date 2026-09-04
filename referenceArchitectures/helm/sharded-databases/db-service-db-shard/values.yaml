@@ -1,0 +1,103 @@
+# Default values for db-service-db-shard.
+# This chart deploys one DB Service database shard and its RT stream.
+
+.common_values: &common_values
+  imagePullSecrets:
+    - name: kx-pull-secret
+
+  # -- You must set your license name. Default is `"kc.lic"`.
+  # Available types are:
+  #  - `"kc.lic"`
+  #  - `"k4.lic"`
+  #  - `"kx.lic"`
+  kxLicenseName: "kc.lic"
+
+db:
+  <<: *common_values
+
+  lateData: false
+
+  stream:
+    prefix: "rt-"
+    name: ""
+    replicas: 1
+
+  assembly:
+    filename: assembly.yaml
+    name: db
+
+  db:
+    idb:
+      storageClassName: ""
+      size: ""
+    hdbt1:
+      storageClassName: ""
+      size: ""
+    imports:
+      enabled: false
+      mountPath: /imports
+      storageClassName: ""
+      size: ""
+
+  dbsDa:
+    image:
+      tag: "0.1.1-beta.1"
+
+    replicaCount: 1
+
+    service:
+      port: 5080
+
+    rtLogs:
+      size: 2Gi
+
+    allowedSbxApis: .query.q,.query.sql
+    secureEnabled: false
+    rcAddr: ""
+    serviceClassConfig: dap
+
+    envs:
+      - name: KXI_LOG_FORMAT
+        value: text
+      - name: KXI_LOG_LEVELS
+        value: default:trace
+
+  dbsSm:
+    image:
+      tag: "0.1.1-beta.1"
+
+    service:
+      port: 20001
+
+    envs:
+      - name: KXI_SM_OBJSTORE_CONVERSION
+        value: "true"
+      - name: KXI_LOG_FORMAT
+        value: text
+      - name: KXI_LOG_LEVELS
+        value: default:trace
+
+rt:
+  <<: *common_values
+
+  image:
+    tag: "1.18.0"
+
+  replicaCount: 1
+
+  envs:
+    - name: RT_LOGLEVEL_CONSOLE
+      value: "INFO"
+    - name: RT_QURAFT_LOG_LEVEL
+      value: "INFO"
+    - name: RT_LOG_LEADER
+      value: "1"
+
+  service:
+    type: "ClusterIP"
+
+  externalService:
+    enabled: false
+
+  persistence:
+    capacity: 2Gi

@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "db.fullname" . }}-da
+  {{- with .Values.dbsDa.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  labels:
+    {{- include "db.da.labels" . | nindent 4 }}
+    app: {{ include "db.fullname" . }}-da
+spec:
+  type: ClusterIP
+  ports:
+    - name: http-metrics
+      port: 8080
+      protocol: TCP
+      targetPort: http-metrics
+    - name: rdb-metrics
+      port: 8081
+      targetPort: 8081
+    - name: idb-metrics
+      port: 8082
+      targetPort: 8082
+    - name: hdb-metrics
+      port: 8083
+      targetPort: 8083
+  selector:
+    {{- include "db.da.selectorLabels" . | nindent 4 }}

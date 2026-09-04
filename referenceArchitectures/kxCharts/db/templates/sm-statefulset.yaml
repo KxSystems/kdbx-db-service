@@ -1,0 +1,208 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "db.fullname" . }}-sm
+  labels:
+    {{- include "db.sm.labels" . | nindent 4 }}
+    app: {{ include "db.fullname" . }}-sm
+spec:
+  serviceName: {{ include "db.fullname" . }}-sm
+  replicas: 1
+  podManagementPolicy: {{ .Values.dbsSm.podManagementPolicy }}
+  {{- with .Values.dbsSm.updateStrategy }}
+  updateStrategy:
+    {{- tpl ( toYaml . ) $ | nindent 4 }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "db.sm.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/log: {{ include ( print $.Template.BasePath "/sm-qlogconfigmap.yaml" ) . | sha256sum }}
+        checksum/config: {{ include ( print $.Template.BasePath "/sm-sidecarconfigmap.yaml" ) . | sha256sum }}
+        checksum/assembly: {{ include ( print $.Template.BasePath "/assembly-configmap.yaml" ) . | sha256sum }}
+        {{- with .Values.dbsSm.podAnnotations }}
+        {{- tpl ( toYaml . ) $ | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "db.sm.labels" . | nindent 8 }}
+        {{- with .Values.dbsSm.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        app: {{ include "db.fullname" . }}-sm
+    spec:
+       {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: sm
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          image: "{{ .Values.image.repository }}/kxi-sm-single:{{ .Values.dbsSm.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- with .Values.dbsSm.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          ports:
+            - containerPort: {{ .Values.dbsSm.service.port }}
+              protocol: TCP
+          {{- with .Values.dbsSm.args }}
+          args:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          env:
+            - name: KXI_CONFIG_FILE
+              value: "/opt/kx/sidecarConfig/config.json"
+            - name: KXI_LOG_CONFIG
+              value: /opt/kx/config/qlog.json
+            - name: KXI_NAME
+              value: sm
+            - name: KXI_SC
+              value: "SM"
+            - name: KXI_PORT
+              value: {{ .Values.dbsSm.service.port | quote }}
+            - name: KXI_LATE_DATA
+              value: {{ .Values.lateData | quote }}
+            - name: KXI_ASSEMBLY_FILE
+              value: /mnt/config/assembly.yaml
+            - name: KXI_RT_EOI_LOG_PATH
+              value: /mnt/logs/eoi
+            - name: KXI_RT_SM_LOG_PATH
+              value: /mnt/logs/sm
+            - name: RT_TOPIC_PREFIX
+              value: {{ .Values.stream.prefix }}
+            - name: RT_SOURCE
+              value: {{ .Values.stream.name | quote }}
+            - name: RT_REPLICAS
+              value: {{ .Values.stream.replicas | quote }}
+            {{- with .Values.dbsSm.envs }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          volumeMounts:
+            {{- with .Values.dbsSm.volumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+            - name: tmp
+              mountPath: "/tmp"
+              readOnly: false
+            - name: {{ include "db.fullname" . }}-sm-sidecar
+              mountPath: /opt/kx/sidecarConfig/config.json
+              subPath: config.json
+            - name: {{ include "db.fullname" . }}-smlog
+              mountPath: /opt/kx/config
+            - mountPath: /mnt/config/assembly.yaml
+              subPath: "assembly.yaml"
+              readOnly: true
+              name: assembly
+            - name: db-service-kx-license
+              mountPath: /opt/kx/lic
+              readOnly: true
+            - mountPath: /mnt/logs
+              name: {{ .Release.Name }}-rt
+            - mountPath: /db
+              name: db-root
+            - mountPath: /db/idb
+              name: idb
+            - mountPath: /db/hdb
+              name: hdbt1
+            {{- if .Values.db.imports.enabled }}
+            - mountPath: {{ .Values.db.imports.mountPath | quote }}
+              name: imports
+            {{- end }}
+
+        - name: sidecar
+          image: "{{ .Values.image.repository }}/kxi-sidecar:{{ .Values.dbsSidecar.image.tag | default .Chart.AppVersion }}"
+          args: ["-p", "8085" ]
+          ports:
+            - containerPort: 8085
+              name: metrics
+          env:
+            - name: KXI_CONFIG_FILE
+              value: "/opt/kx/sidecarConfig/config.json"
+            - name: KXI_LOG_CONFIG
+              value: /opt/kx/config/qlog.json
+          volumeMounts:
+            - name: tmp-sidecar
+              mountPath: "/tmp"
+              readOnly: false
+            - name: {{ include "db.fullname" . }}-sm-sidecar
+              mountPath: /opt/kx/sidecarConfig/
+            - name: {{ include "db.fullname" . }}-smlog
+              mountPath: /opt/kx/config
+            - name: db-service-kx-license
+              mountPath: /opt/kx/lic
+              readOnly: true
+      restartPolicy: Always
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 100Mi
+        - name: tmp-sidecar
+          emptyDir:
+            sizeLimit: 100Mi
+        - name: db-service-kx-license
+          secret:
+            defaultMode: 420
+            items:
+              - key: license
+                path: {{ .Values.kxLicenseName }}
+            optional: false
+            secretName: kx-license
+        {{- with .Values.dbsSm.volumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        - name: db-root
+          emptyDir: {}
+        - name: assembly
+          configMap:
+            name: {{ .Release.Name }}-assembly
+        - name: hdbt1
+          persistentVolumeClaim:
+           claimName: {{ .Release.Name }}-hdbt1
+        - name: idb
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-idb
+        {{- if .Values.db.imports.enabled }}
+        - name: imports
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-imports
+        {{- end }}
+        - name: {{ include "db.fullname" . }}-sm-sidecar
+          configMap:
+            name: {{ include "db.fullname" . }}-sm-sidecar
+        - name: {{ include "db.fullname" . }}-smlog
+          configMap:
+            name: {{ include "db.fullname" . }}-smlog
+      {{- with .Values.dbsSm.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.dbsSm.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.dbsSm.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  volumeClaimTemplates:
+    - metadata:
+        name: {{ .Release.Name }}-rt
+        labels:
+          {{- include "db.sm.labels" . | nindent 10 }}
+          app: {{ include "db.fullname" . }}-sm
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: {{ .Values.dbsSm.rtLogs.size }}

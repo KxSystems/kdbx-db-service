@@ -90,6 +90,21 @@ curl -X GET "http://localhost:8080/api/v0/tables"
 
 For full request and response examples, refer to the [OpenAPI documentation](https://code.kx.com/kdb-x/services/db-service/api/dbservice.html).
 
+## OpenAPI docs
+
+The OpenAPI source and generated Redoc page live under `openapi/`.
+
+When updating the API spec or Redoc assets, regenerate `openapi/dbservice.html` from the `openapi/` directory:
+
+```bash
+cd openapi
+npx @redocly/cli@latest lint dbservice.yaml
+npx @redocly/cli@latest build-docs dbservice -t redoc-custom.hbs -o dbservice.html
+python3 -m http.server 8081
+```
+
+Then open `http://localhost:8081/dbservice.html`.
+
 ## Example notebooks
 
 Notebooks are included in this repo with end-to-end examples using the q client, Python client, and cURL.
@@ -119,21 +134,51 @@ Ensure DB Service is running at `http://localhost:8080`, then open the URL print
 
 ## Sample data feed
 
-There is a sample data feed in the `samples/` directory, demonstrating how to use the Python RT library to send streaming data to the DB Service. To run the sample feed:
+There is a sample data feed in the `samples/data` directory, demonstrating how to use the Python RT library to send streaming data to the DB Service. To run the sample feed:
 
 1. Install dependencies
 
 ```bash
-cd samples
+cd samples/data
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-2. Start the feed 
+2. Create the `fxquote` table. This is required before starting the feed:
+
+```bash
+curl -s -X POST "http://localhost:8080/api/v0/tables/fxquote" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "partitioned",
+    "prtnCol": "ts",
+    "columns": [
+      {"name": "trddate", "type": "date"},
+      {"name": "ts", "type": "timestamp"},
+      {"name": "sym", "type": "symbol"},
+      {"name": "bid", "type": "float"},
+      {"name": "ask", "type": "float"}
+    ]
+  }'
+```
+
+3. Run the sample feed in a separate terminal from the running DB Service or client session. Alternatively, run the feed in the background with `python3 fxfeed.py &`.
 
 ```bash
 python3 fxfeed.py
+```
+
+The feed runs continuously, publishing FX quote data to the `fxquote` table until you stop it with `Ctrl+C`. It prints a confirmation message when it starts.
+
+To verify that data is being published, run the following row-count query while the feed is active. Run the query again after a few seconds and confirm that the `rowCount` value has increased.
+
+```bash
+curl -s -X POST "http://localhost:8080/api/v0/query/q" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "select rowCount:count i from fxquote"}'
 ```
 
 ## Using systemd slices for Community Edition usage limits

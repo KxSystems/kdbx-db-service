@@ -1,0 +1,16 @@
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{ include "rt.fullname" . }}
+  {{- with .Values.serviceAccount.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "rt.serviceAccountName" . }}
+    apiGroup: ""
+roleRef:
+  kind: Role
+  name: {{ include "rt.fullname" . }}
+  apiGroup: ""

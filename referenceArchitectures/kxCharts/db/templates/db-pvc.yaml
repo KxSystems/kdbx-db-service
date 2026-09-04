@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-idb
+  annotations:
+    helm.sh/resource-policy: keep
+  labels:
+    {{- include "db.da.labels" . | nindent 4 }}
+    app: {{ include "db.fullname" . }}-da
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: {{ .Values.db.idb.storageClassName }}
+  resources:
+    requests:
+      storage: {{ .Values.db.idb.size }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-hdbt1
+  annotations:
+    helm.sh/resource-policy: keep
+  labels:
+    {{- include "db.da.labels" . | nindent 4 }}
+    app: {{ include "db.fullname" . }}-da
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: {{ .Values.db.hdbt1.storageClassName }}
+  resources:
+    requests:
+      storage: {{ .Values.db.hdbt1.size }}
+{{- if .Values.db.imports.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-imports
+  annotations:
+    helm.sh/resource-policy: keep
+  labels:
+    {{- include "db.da.labels" . | nindent 4 }}
+    app: {{ include "db.fullname" . }}-da
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: {{ .Values.db.imports.storageClassName }}
+  resources:
+    requests:
+      storage: {{ .Values.db.imports.size }}
+{{- end }}
