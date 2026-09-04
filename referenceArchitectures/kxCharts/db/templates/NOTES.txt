@@ -1,0 +1,10 @@
+Installed DB Service database chart
+===================================
+This chart deploys an instance of the DB Service database to Kubernetes
+
+Included
+========
+ - SM Storage Manager which writes data to disk and manages migration through tiers
+ - DAPs Data Access Processes - RDB, IDB, HDBs to provide access to data in the various tiers
+
+See the DB Service documentation for more information.

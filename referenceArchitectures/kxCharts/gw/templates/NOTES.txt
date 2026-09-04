@@ -1,0 +1,26 @@
+Installed DB Service gateway chart
+================================
+This chart offers a query and streaming access service to DB Service data
+
+Included
+========
+ - Service Gateway deployment offering REST, qIPC & Streaming entrypoints
+ - Resource Coordinator manages all incoming queries sent via the Service Gateway.
+ - Aggregator to combine all data into a single dataset
+
+See the DB Service documentation for more information.
+
+Access
+======
+
+By default the access points are not exposed outside the cluster for security reasons. To test you can port forward the Service Gateway endpoints to get development access
+
+  $ kubectl port-forward svc/{{ include "gw.fullname" . }}-sg {{.Values.dbsSg.service.ports.http}}:{{.Values.dbsSg.service.ports.http}}
+  $ kubectl port-forward svc/{{ include "gw.fullname" . }}-sg {{.Values.dbsSg.service.ports.qipc}}:{{.Values.dbsSg.service.ports.qipc}}
+
+Alternatively by modifying the service type of the Service Gateway to 'Load Balancer' you can expose the Service Gateway externally from the cluster.
+
+In your custom myvalues.yaml address
+
+service:
+  type: LoadBalancer

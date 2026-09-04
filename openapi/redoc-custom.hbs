@@ -1,0 +1,41 @@
+<html>
+  <head>
+    {{!-- Custom Redoc template wrapper used by `build-docs -t redoc-custom.hbs`. --}}
+    <meta charset='utf-8' />
+    <title>{{title}}</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1' />
+    <style>
+      body { margin: 0; padding: 0; }
+      .codex-two-select-wrap {
+        display: flex;
+        gap: 8px;
+        margin: 0 0 10px 0;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .codex-two-select-wrap label {
+        font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+        font-size: 11px;
+        color: #4b5563;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+      }
+      .codex-two-select-wrap select {
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        padding: 6px 8px;
+        font-size: 12px;
+        background: #fff;
+      }
+      .codex-tab-hidden {
+        display: none !important;
+      }
+    </style>
+    {{{redocHead}}}
+  </head>
+  <body>
+    {{{redocHTML}}}
+    {{!-- Injects client-side behavior that converts sample tabs into two dropdowns. --}}
+    <script src='./custom-dropdown.js'></script>
+  </body>
+</html>

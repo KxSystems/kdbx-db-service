@@ -1,0 +1,89 @@
+# Anchor to set common values for the sub-charts in this reference architecture
+.common_values: &common_values
+  imagePullSecrets:
+    - name: kx-pull-secret
+
+  # -- You must set your license name. Default is `"kc.lic"`.
+  # Available types are:
+  #  - `"kc.lic"`
+  #  - `"k4.lic"`
+  #  - `"kx.lic"`
+  kxLicenseName: "kc.lic"
+
+# Values for gw sub-chart.
+# @default -- `{}`
+gw:
+  <<: *common_values
+
+  dbsSg:
+    # -- Storage Manager address made available to the Service Gateway.
+    # This should include `RELEASENAME` that will be used for deployment to have final value as `RELEASENAME-db-sm:20001`
+    # where `$RELEASENAME` is the name the chart is deployed as.
+    smAddrs:
+      - name: db
+        addr: "db-service-ip-db-sm:20001"
+
+# Values for db sub-chart
+# @default -- `{}`
+db:
+  <<: *common_values
+
+  assembly:
+    # -- Deployment assembly loaded by the DB Service components.
+    # It defines labels, stream, mounts, and SM tiers. Create table schemas
+    # through the DB Service table API.
+    filename: assembly.yaml
+
+  # DB Service storage configurations.
+  # This must be configured before deployment.
+  # @default -- `{}`
+  db:
+    # Intraday persistent storage configuration.
+    # @default -- `{}`
+    idb:
+      # -- Defines the storageClassNames for all the persistent data storage in the DB Service.
+      # This should map to Kubernetes storageClassNames with accessMode of `RWM`.
+      # More information can be found here: https://kubernetes.io/docs/concepts/storage/storage-classes/
+      storageClassName: "fsx-lustre"
+
+      # -- Size of the Intraday persistent storage.
+      size: "2Gi"
+
+    # HDB Tier 1 persistent storage configuration.
+    # @default -- `{}`
+    hdbt1:
+      # -- Defines the storageClassNames for all the persistent data storage in the DB Service.
+      # This should map to Kubernetes storageClassNames with accessMode of `RWM`.
+      # More information can be found here: https://kubernetes.io/docs/concepts/storage/storage-classes/
+      storageClassName: "fsx-lustre"
+
+      # -- Size of the HDB Tier 1 persistent storage.
+      size: "2Gi"
+
+  # -- Defines the RT stream name associated with the deployed DB Service instance.
+  # With prefix must match the deployed name of the RT stream minus replica number.
+  # Associated RT Stream pods `rt-<stream-name>-<REPLICA-NO>`
+  stream:
+    prefix: "rt-"
+    name: "db-service-ip"
+    replicas: 3
+
+  # Configuration for the DA.
+  # @default -- `{}`
+  dbsDa:
+    # -- Defines the name and port of the RC to allow the data to be accessed via queries.
+    # This must be set to the appropriate full FQDN RC service and port.
+    # This should include `RELEASENAME` that will be used for deployment to have final value as `RELEASENAME-gw-rc:5050`
+    # where `$RELEASENAME` is the name the chart is deployed as.
+    rcAddr: "db-service-ip-gw-rc:5050"
+
+# Values for rt sub-chart
+# @default -- `{}`
+rt:
+  <<: *common_values
+
+  # Configure persistence within chart.
+  # @default -- `{}`
+  persistence:
+    # -- Specifies the storage capacity request for the Persistent Volume Claim.
+    capacity: 2Gi

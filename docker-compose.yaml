@@ -24,7 +24,7 @@ services:
       - RT_SINK=data
       - RT_TOPIC_PREFIX=rt-
     hostname: rt-data-0
-    image: ${DS_REGISTRY:-}kxi-rt:${DS_RT_TAG}
+    image: ${DS_RT_REGISTRY:-${DS_REGISTRY}}kxi-rt:${DS_RT_TAG}
     command: -p 6000 -in /s/in -out /s/out -cp /s/state -size 1
 
   kx-db-sm:
@@ -66,9 +66,11 @@ services:
     volumes:
       - ./data/db:/db
       - ./data/logs:/logs
+      - ./code:/code:ro
     networks:
       - kx-db
     environment:
+      - KXI_CUSTOM_FILE
       - KDB_LICENSE_B64
       - KDB_K4LICENSE_B64
       - KXDB_ENABLED=true
@@ -114,9 +116,12 @@ services:
     mem_limit: ${DS_OTHER_MEM_LIMIT:-0}
     tty: true
     stdin_open: true
+    volumes:
+      - ./code:/code:ro
     networks:
       - kx-db
     environment:
+      - KXI_CUSTOM_FILE
       - KDB_LICENSE_B64
       - KDB_K4LICENSE_B64
       - KXDB_ENABLED=true

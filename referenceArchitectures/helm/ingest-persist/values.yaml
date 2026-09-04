@@ -1,0 +1,372 @@
+# Default values for db-service-ingest-persist.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates of subcharts.
+
+# Anchor to set common values for the sub-charts in this reference architecture.
+.common_values: &common_values
+  imagePullSecrets:
+    - name: kx-pull-secret
+
+  # -- You must set your license name. Default is `"kc.lic"`.
+  # Available types are:
+  #  - `"kc.lic"`
+  #  - `"k4.lic"`
+  #  - `"kx.lic"`
+  kxLicenseName: "kc.lic"
+
+# Values for gw sub-chart.
+# @default -- `{}`
+gw:
+#  common values from anchors on the top.
+  <<: *common_values
+
+  # Default Resource Coordinator configuration for DB Service gateway chart components.
+  # @default -- `{}`
+  dbsRc:
+    image:
+      tag: "0.1.1-beta.1"
+
+    service:
+      port: 5050
+
+    # -- Sets the available free string queries available for the RC.
+    # Each has security and performance implications.
+    # See the DB Service documentation for more information.
+    allowedSbxApis: .kxi.sql,.kxi.qsql,.kxi.sql2
+
+    # -- Default common environment variables for the Resource Coordinator.
+    # Additional ENVs can be added and these overridden in custom values files.
+    # If overriding `envs`, ensure you include all the default values.
+    envs:
+      - name: KXI_LOG_FORMAT
+        value: text
+      - name: KXI_LOG_LEVELS
+        value: default:trace
+
+  # Default Service Gateway configuration for DB Service gateway chart components.
+  # @default -- `{}`
+  dbsSg:
+    image:
+      tag: "0.1.1-beta.1"
+
+    # -- This sets the number of replicas for the Service Gateway.
+    # More information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#replicas-and-scaling
+    replicaCount: 1
+
+    # This is for setting up a service.
+    # Service type options available `ClusterIP`, `NodePort`, `LoadBalancer`, `ExternalName`.
+    # More information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
+    # @default -- `{}`
+    service:
+      # -- Sets the Service type.
+      # Refer to Service Types https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
+      type: ClusterIP
+
+      # Set list of exposed service ports.
+      ports:
+        # -- TCP/qIPC port
+        qipc: 5040
+
+        # -- REST/HTTP port
+        http: 8080
+
+        # -- When `customIpcAuth.enabled` is set to `true`, this port is used for the external qIPC connection to the Service Gateway.
+        # See the DB Service documentation for more information.
+        qipcext: 5051
+
+    # -- Default common environment variables for the Service Gateway.
+    # Additional ENVs can be added and these overridden in custom values files.
+    # If overriding `envs`, ensure you include all the default values.
+    envs:
+      - name: KXI_LOG_FORMAT
+        value: text
+      - name: KXI_LOG_LEVELS
+        value: default:trace
+      # -- Enables CORS headers to allow external domains to access the Service Gateway
+      - name: KXI_SG_CORS_ENABLED
+        value: "false"
+      # -- Comma separated list of the full FQDN remote domains which are allowed to access the Service Gateway
+      - name: KXI_SG_CORS_ORIGINS
+        value: ""
+      # Can set JAVA_OPTS for advance memory configurations
+      # - name: JAVA_OPTS
+      #   value: "-Xms268435456 -Xmx2080374784 -XX:MaxDirectMemorySize=2080374784"
+
+    smAddrs:
+      - name: db
+        addr: "{{ .Release.Name }}-db-sm:20001"
+
+  # Default Aggregator configuration for DB Service gateway chart components.
+  # @default -- `{}`
+  dbsAgg:
+    image:
+      tag: "0.1.1-beta.1"
+
+    # -- This sets the number of replicas for the Aggregator.
+    # More information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#replicas-and-scaling
+    replicaCount: 1
+
+    # -- Allows for custom code to be loaded into the Aggregator specifically for UDAs typically deployed in a db chart.
+    # See the DB Service documentation for more information.
+    # @default -- `{}`
+    customCode:
+      # -- If `customCode.configMap` is populated there should be a `configMap` deployed by that name
+      # and it will be mounted into the Aggregator.
+      configMap: ""
+      # configMap: "db-customcode"
+
+      # -- The entrypoint should be the name of the file which is executed to load the custom code.
+      entry: ""
+      # entry: "udas.q"
+
+    # -- This is for setting up an Aggregator service.
+    # More information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
+    # @default -- `{}`
+    service:
+      # -- Sets the Service type.
+      # Refer to Service Types https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
+      type: "ClusterIP"
+
+      # -- Set exposed Service Port.
+      # Refer to Service Ports https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports
+      port: 5060
+
+      # -- This sets the service annotations for the Aggregator.
+      # Dictionary of key-value pairs.
+      # Refer to Object Annotations https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+      # @default -- `{}`
+      annotations: {}
+
+    # -- Default common environment variables for the Aggregator.
+    # Additional ENVs can be added and these overridden in custom values files.
+    # If overriding `envs`, ensure you include all the default values.
+    envs:
+      - name: KXI_LOG_FORMAT
+        value: text
+      - name: KXI_LOG_LEVELS
+        value: default:trace
+      # Custom q code can be loaded into the aggregator from mounted file systems
+      #  - name: KXI_CUSTOM_FILE
+      #    value: /opt/kx/dev/custom_agg_api.q
+
+# Values for db sub-chart
+# @default -- `{}`
+db:
+#  common values from anchors on the top
+  <<: *common_values
+
+  # -- Defines whether the DB Service has `lateData` enabled.
+  # See the DB Service documentation for more information.
+  lateData: true
+
+  # -- Defines the RT stream name associated with the deployed DB Service instance.
+  # With prefix must match the deployed name of the RT stream minus replica number.
+  # Associated RT Stream pods 'rt-stream-<REPLICA-NO>'
+  stream:
+    prefix: "rt-"
+    name: ""
+    replicas: 3
+
+  assembly:
+    # -- This defines the assembly file to be loaded into the DB Service.
+    # It should be on the base directory of the chart folder under `db`.
+    # See the DB Service documentation for more information.
+    filename: assembly.yaml
+
+  # DB Service storage configurations.
+  # This must be configured before deployment.
+  # @default -- `{}`
+  db:
+    # Intraday persistent storage configuration.
+    # @default -- `{}`
+    idb:
+      # -- Defines the storageClassNames for all the persistent data storage in the DB Service.
+      # This should map to Kubernetes storageClassNames with accessMode of `RWM`.
+      # More information can be found here: https://kubernetes.io/docs/concepts/storage/storage-classes/
+      storageClassName: ""
+      # storageClassName: "fsx-lustre"
+
+      # -- Size of the Intraday persistent storage.
+      size: ""
+      # size: "20Gi"
+
+    # HDB Tier 1 persistent storage configuration.
+    # @default -- `{}`
+    hdbt1:
+      # -- Defines the storageClassNames for all the persistent data storage in the DB Service.
+      # This should map to Kubernetes storageClassNames with accessMode of `RWM`.
+      # More information can be found here: https://kubernetes.io/docs/concepts/storage/storage-classes/
+      storageClassName: ""
+      # storageClassName: "fsx-lustre"
+
+      # -- Size of the HDB Tier 1 persistent storage.
+      size: ""
+      # size: "20Gi"
+
+  # Configuration for the DA.
+  # @default -- `{}`
+  dbsDa:
+    image:
+      tag: "0.1.1-beta.1"
+
+    # -- This sets the number of replicas for the DA.
+    # More information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#replicas-and-scaling
+    replicaCount: 1
+
+    # -- Entrypoint for custom code written under `customcode`.
+    # Create your custom code and UDAs under here and it will be loaded into the DA under `/opt/kx/packages/{customCodeEntry}.q`.
+    # See the DB Service documentation for more information.
+    customCodeEntry: udas.q
+
+    # -- This is for setting up a service and the port in use by the DA.
+    # More information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
+    # @default -- `{}`
+    service:
+      # -- Set exposed Service Port.
+      # Refer to Service Ports https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports
+      port: 5080
+
+      # -- This sets the service annotations for the DAP.
+      # Dictionary of key-value pairs.
+      # Refer to Object Annotations https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+      # @default -- `{}`
+      annotations: {}
+
+    # -- This defines how much storage should be assigned for rt logs storage in the DA.
+    rtLogs:
+      size: 2Gi
+
+    # -- Sets the available free string queries available for the DA.
+    # Each has security and performance implications.
+    # See the DB Service documentation for more information.
+    allowedSbxApis: .kxi.sql,.kxi.qsql,.kxi.sql2
+
+    # -- Defines whether DB Service is secured to prevent qsql-based string executions.
+    # If enabled only API function queries will be allowed on the DB Service.
+    secureEnabled: false
+  
+    # -- Defines the name and port of the RC to allow the data to be accessed via queries.
+    # This must be set to the appropriate full FQDN RC service and port.
+    # This should include RELEASENAME that will be used for deployment to have final value as `RELEASENAME-gw-rc:5050`
+    rcAddr: ""  
+    # rcAddr: "gw-rc:5050"
+
+    # -- Links the DA to the appropriate service class configuration in your assembly
+    # under `elements.dap.instances`.
+    # See the DB Service documentation for more information.
+    serviceClassConfig: dap
+
+    # -- Default common environment variables for the DA.
+    # Additional ENVs can be added and these overridden in custom values files.
+    # If overriding `envs`, ensure you include all the default values.
+    envs:
+      - name: KXDB_ENABLED
+        value: "true"
+      - name: KXI_SCHEMA_OWNERSHIP
+        value: internal
+      - name: KXI_LOG_FORMAT
+        value: text
+      - name: KXI_LOG_LEVELS
+        value: default:trace
+      # -- RT running in single node mode
+      # See the DB Service documentation for more information.
+      # - name: RT_REPLICAS
+      #   value: 1
+
+  dbsSm:
+    image:
+      tag: "0.1.1-beta.1"
+
+    service:
+      port: 20001
+
+    envs:
+      - name: KXDB_ENABLED
+        value: "true"
+      - name: KXI_SCHEMA_OWNERSHIP
+        value: internal
+      - name: KXI_SM_OBJSTORE_CONVERSION
+        value: "true"
+      - name: KXI_LOG_FORMAT
+        value: text
+      - name: KXI_LOG_LEVELS
+        value: default:trace
+
+# Values for rt sub-chart
+# @default -- `{}`
+rt:
+#  common values from anchors on the top
+  <<: *common_values
+
+  image:
+    tag: "1.18.0"
+
+  # -- This sets the `replicaSet` count.
+  # More information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#replicas-and-scaling
+  replicaCount: 3
+
+  # -- Can provide any valid `q` runtime argument here.
+  # Full details here: https://code.kx.com/q/basics/cmdline/
+  # Additionally RT archival configuration can be provided here.
+  # See the DB Service documentation for more information.
+  args:
+    - "-time"
+    - "10080"
+    - "-disk"
+    - "90"
+
+  # -- Additional ENVs can be added and these overridden in custom values files.
+  # See the DB Service documentation for RT configuration options.
+  envs:
+    - name: RT_LOGLEVEL_CONSOLE
+      value: "INFO"
+    - name: RT_QURAFT_LOG_LEVEL
+      value: "INFO"
+    - name: RT_LOG_LEADER
+      value: "1"
+
+  # -- Provisions the Kubernetes Service required to expose the workloads.
+  # More information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
+  # @default -- `{}`
+  service:
+    # -- Sets the Service type.
+    # Refer to Service Types https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
+    type: "ClusterIP"
+
+    # -- This sets the service annotations for the Internal RT Service.
+    # Dictionary of key-value pairs.
+    # Refer to Object Annotations https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+    # @default -- `{}`
+    annotations: {}
+
+  # -- This is for setting up a additional external services.
+  # Setting type to `LoadBalancer` and enabling will expose endpoints external to cluster.
+  # More information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
+  # @default -- `{}`
+  externalService:
+    # -- By default external services are disabled
+    enabled: false
+
+    # -- This sets the Service type.
+    # Setting the type field to `LoadBalancer` provisions a load balancer for your Service.
+    # The actual creation of the load balancer happens asynchronously, and information about the provisioned balancer is published in the Service's `.status.loadBalancer`.
+    # More information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
+    type: "LoadBalancer"
+
+    # -- This sets the service annotations for the External RT Service.
+    # Dictionary of key-value pairs.
+    # Refer to Object Annotations https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+    # @default -- `{}`
+    annotations: {}
+
+    # -- This allows you to specify your LoadBalancer's external IP address
+    # Should specify one per replica. e.g. `replicaCount: 3`, three IPs should be listed.
+    # More information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#loadbalancer
+    # @default -- `{}`
+    loadBalancerIPs: {}
+
+  # Configure persistence within chart.
+  # @default -- `{}`
+  persistence:
+    # -- Specifies the storage capacity request for the Persistent Volume Claim.
+    capacity: 2Gi

@@ -1,0 +1,12 @@
+# Custom DB Service shard values for the NASDAQ equities shard.
+db:
+  assembly:
+    filename: db-service-db-equities-assembly.yaml
+    name: equities_nasdaq
+
+  stream:
+    prefix: "rt-"
+    name: "db-service-db-equities-nasdaq"
+
+  labels:
+    exchange: "nasdaq"

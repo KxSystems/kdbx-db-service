@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "gw.fullname" . }}-agg-sidecar
+data:
+  config.json: |-
+      {
+        "connection": "::{{ .Values.dbsAgg.service.port }}",
+        "frequencySecs": 5,
+        "metrics": {
+          "enabled": "true",
+          "frequency": 5,
+          "handler": {
+            "pc": true,
+            "pg": true,
+            "ph": true,
+            "po": true,
+            "pp": true,
+            "ps": true,
+            "ts": true,
+            "wc": true,
+            "wo": true,
+            "ws": true
+          }
+        }
+      }

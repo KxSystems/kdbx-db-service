@@ -1,0 +1,7 @@
+Installed DB Service ingest-persist - RT based reference architecture
+================================
+
+You have installed an instance of the DB Service ingest-persist reference architecture. This deploys the following components using their independent charts:
+- A db chart for the DB Service database components that ingest and persist data
+- An rt chart as the message bus used to log ingested data and publish it to DB Service
+- A gw chart used to query data from DB Service

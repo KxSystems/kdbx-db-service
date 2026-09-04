@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "db.fullname" . }}-sm
+  {{- with .Values.dbsSm.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  labels:
+    {{- include "db.sm.labels" . | nindent 4 }}
+    app: {{ include "db.fullname" . }}-sm
+spec:
+  type: ClusterIP
+  ports:
+    - name: sm-qipc
+      port: {{ .Values.dbsSm.service.port }}
+      targetPort: {{ .Values.dbsSm.service.port }}
+    - name: http-metrics
+      port: 8080
+      protocol: TCP
+      targetPort: http-metrics
+  selector:
+    {{- include "db.sm.selectorLabels" . | nindent 4 }}

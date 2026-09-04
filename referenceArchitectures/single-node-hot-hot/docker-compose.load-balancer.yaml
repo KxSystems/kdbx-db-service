@@ -1,0 +1,11 @@
+services:
+  db-service-load-balancer:
+    image: nginx:1.27-alpine
+    container_name: db-service-hot-hot-lb
+    ports:
+      - ${DS_LB_HTTP_PORT:-8080}:8080
+    environment:
+      DB_SERVICE_A_GATEWAY: ${DB_SERVICE_A_GATEWAY:?Set DB_SERVICE_A_GATEWAY to the Host A DB Service gateway, for example host-a.example.com:8080}
+      DB_SERVICE_B_GATEWAY: ${DB_SERVICE_B_GATEWAY:?Set DB_SERVICE_B_GATEWAY to the Host B DB Service gateway, for example host-b.example.com:8080}
+    volumes:
+      - ./nginx.conf:/etc/nginx/templates/default.conf.template:ro

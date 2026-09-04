@@ -1,0 +1,86 @@
+# Default values for db-service-api.
+# This chart deploys the common DB Service gateway used by the sharded databases.
+
+.common_values: &common_values
+  imagePullSecrets:
+    - name: kx-pull-secret
+
+  # -- You must set your license name. Default is `"kc.lic"`.
+  # Available types are:
+  #  - `"kc.lic"`
+  #  - `"k4.lic"`
+  #  - `"kx.lic"`
+  kxLicenseName: "kc.lic"
+
+gw:
+  <<: *common_values
+
+  dbsRc:
+    image:
+      tag: "0.1.1-beta.1"
+
+    service:
+      port: 5050
+
+    allowedSbxApis: .query.q,.query.sql
+
+    envs:
+      - name: KXI_ALLOW_PARTIAL_LABELS
+        value: "true"
+      - name: KXI_LOG_FORMAT
+        value: text
+      - name: KXI_LOG_LEVELS
+        value: default:trace
+
+  dbsSg:
+    image:
+      tag: "0.1.1-beta.1"
+
+    replicaCount: 1
+
+    service:
+      type: ClusterIP
+      ports:
+        qipc: 5040
+        http: 8080
+        qipcext: 5051
+
+    # Storage Manager addresses made available to the Service Gateway.
+    # Update these if you change the shard release names.
+    smAddrs:
+      - name: equities_nasdaq
+        addr: db-service-db-equities-nasdaq-db-sm:20001
+      - name: equities_nyse
+        addr: db-service-db-equities-nyse-db-sm:20001
+      - name: fx_emea
+        addr: db-service-db-fx-emea-db-sm:20001
+      - name: fx_americas
+        addr: db-service-db-fx-americas-db-sm:20001
+
+    envs:
+      - name: KXI_LOG_FORMAT
+        value: text
+      - name: KXI_LOG_LEVELS
+        value: default:trace
+      - name: KXI_SCOPE_AFFINITY
+        value: soft
+      - name: KXI_SG_CORS_ENABLED
+        value: "false"
+      - name: KXI_SG_CORS_ORIGINS
+        value: ""
+
+  dbsAgg:
+    image:
+      tag: "0.1.1-beta.1"
+
+    replicaCount: 1
+
+    service:
+      type: ClusterIP
+      port: 5060
+
+    envs:
+      - name: KXI_LOG_FORMAT
+        value: text
+      - name: KXI_LOG_LEVELS
+        value: default:trace

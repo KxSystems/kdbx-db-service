@@ -1,0 +1,8 @@
+# Redocly CLI config: maps the `dbservice` API alias to the local OpenAPI file.
+apis:
+  dbservice:
+    root: ./dbservice.yaml
+extends:
+  - recommended
+rules:
+  security-defined: off

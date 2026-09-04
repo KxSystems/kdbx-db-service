@@ -1,0 +1,48 @@
+Installed DB Service RT chart
+================================
+
+Subscribing
+===========
+
+To begin subscribing to the RT service, modify your client deployment container to include the following Env Vars:
+
+```
+- name: RT_SOURCE
+  value: "{{ .Release.Name }}"
+- name: RT_TOPIC_PREFIX
+  value: "rt-"
+- name: RT_REPLICAS
+  value: "{{ .Values.replicaCount }}"
+```
+
+Publishing
+==========
+
+For publishing internal to cluster you must locate each of the internal Services
+
+{{ range $i, $e := until ( .Values.replicaCount | int ) }}
+{{- $targetPod := printf "%s-%d" ( include "rt.fullname" $ ) $i }}
+{{- printf "%s.%s.svc.cluster.local:%v" $targetPod $.Release.Namespace ( 5000 | int ) }}
+{{ end }}
+
+{{- if .Values.externalService.enabled -}}
+For publishing external to the cluster LoadBalancer IPs must be used
+
+{{ if eq .Values.externalService.type "LoadBalancer" -}}
+Running the following command will return external IP and target port:
+
+export RT_SERVICES=$(kubectl get service --namespace {{ .Release.Namespace }} -l app.kubernetes.io/instance={{ .Release.Name }},insights.kx.com/rtservice=external -o jsonpath='{range .items[*]}{.status.loadBalancer.ingress[0].ip}:{.spec.ports[?(@.name=="tcp-ext")].port}{"\n"}{end}')
+echo $RT_SERVICES
+{{- else if eq .Values.externalService.type "NodePort" -}}
+Running the following command will return external node IP and target port:
+
+export NODE_IPS=$(kubectl get nodes -o jsonpath='{.items[*].status.addresses[?(@.type=="InternalIP")].address}')
+export SERVICE_PORTS=$(kubectl get service --namespace {{ .Release.Namespace }} -l app.kubernetes.io/instance={{ .Release.Name }},insights.kx.com/rtservice=external -o jsonpath='{range .items[*]}{.spec.ports[?(@.name=="tcp-ext")].nodePort}{"\n"}{end}')
+
+for node in $NODE_IPS; do
+  for port in $SERVICE_PORTS; do
+    echo "$node:$port"
+  done
+done
+{{- end }}
+{{- end }}

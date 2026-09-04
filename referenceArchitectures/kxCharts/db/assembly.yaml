@@ -1,0 +1,55 @@
+name: DB Service
+description: Example DB Service ingest-persist deployment configuration
+labels:
+  region: us
+
+# Demo table schemas are created through the DB Service table API.
+tables: {}
+
+bus:
+  stream:
+    protocol: rt
+    topic: {{ .Values.stream.name }}
+
+mounts:
+  rdb:
+    type: stream
+    baseURI: none
+    partition: none
+  idb:
+    type: local
+    baseURI: file:///db/idb
+    partition: ordinal
+  hdb:
+    type: local
+    baseURI: file:///db/hdb
+    partition: date
+
+elements:
+  dap:
+    instances:
+      dap:
+        mountList:
+          - rdb
+          - idb
+          - hdb
+
+  sm:
+    description: Storage manager
+    source: stream
+    tiers:
+      - name: stream
+        mount: rdb
+      - name: idb
+        mount: idb
+        schedule:
+          freq: 0D00:10:00 # every 10 minutes
+      - name: hdb1
+        mount: hdb
+        store: file:///db/hdb
+        schedule:
+          freq: 1D00:00:00 # every day
+          snap:   01:35:00 # at 1:35 AM
+        retain:
+          time: 2 days
+    disableDiscovery: true

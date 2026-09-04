@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "rt.fullname" . }}-sidecar
+  labels:
+    {{- include "rt.labels" . | nindent 4 }}
+data:
+  config.json: |-
+      {
+        "connection": "::4000",
+        "frequencySecs": 5,
+        "metrics": {
+          "enabled": "true",
+          "frequency": 5,
+          "handler": {
+            "pc": true,
+            "pg": true,
+            "ph": true,
+            "po": true,
+            "pp": true,
+            "ps": true,
+            "ts": true,
+            "wc": true,
+            "wo": true,
+            "ws": true
+          }
+        }
+      }
