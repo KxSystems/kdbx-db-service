@@ -1,4 +1,4 @@
-# KDB-X DB Service - Public Preview 1
+# KDB-X DB Service - Public Preview 1.1
 
 The DB Service is a self-contained variation of the KDB-X [tick-based architecture](https://code.kx.com/kdb-x/how_to/manage_streaming_data/architecture.html), with many useful built-in features accessible via a well-documented API. It is a simple way to quickly deploy a fully-implemented KDB-X database to capture and query streaming and batch data.
 
@@ -38,7 +38,7 @@ BEARER=BEARERTOKEN
 docker login -u $EMAIL -p $BEARER portal.dl.kx.com
 ```
 
-3. Add your license to the `.env` file (see note above):
+3. Add your base64 encoded license to the `.env` file (see note above):
 
 ```bash
 export KDB_LICENSE_B64=LICENSE
@@ -75,7 +75,7 @@ Full client documentation and usage examples are available in the [q client repo
 The Python client can be installed directly from https://portal.dl.kx.com.
 
 ```bash
-pip install --pre --extra-index-url https://portal.dl.kx.com/assets/pypi/ kdbx_db_service_client
+pip install --upgrade --pre --extra-index-url https://portal.dl.kx.com/assets/pypi/ kdbx_db_service_client
 ```
 
 Full client documentation and usage examples are available in the [Python client repo](https://github.com/KxSystems/kdbx-db-service-python-client). For additional KDB-X Python installation and environment setup, refer to the [KDB-X Python install guide](https://code.kx.com/kdb-x/get_started/kdb-x-python-install.html).
@@ -90,20 +90,6 @@ curl -X GET "http://localhost:8080/api/v0/tables"
 
 For full request and response examples, refer to the [OpenAPI documentation](https://code.kx.com/kdb-x/services/db-service/api/dbservice.html).
 
-## OpenAPI docs
-
-The OpenAPI source and generated Redoc page live under `openapi/`.
-
-When updating the API spec or Redoc assets, regenerate `openapi/dbservice.html` from the `openapi/` directory:
-
-```bash
-cd openapi
-npx @redocly/cli@latest lint dbservice.yaml
-npx @redocly/cli@latest build-docs dbservice -t redoc-custom.hbs -o dbservice.html
-python3 -m http.server 8081
-```
-
-Then open `http://localhost:8081/dbservice.html`.
 
 ## Example notebooks
 
@@ -121,7 +107,7 @@ Notebooks are included in this repo with end-to-end examples using the q client,
 cd notebooks
 python3 -m venv venv
 source venv/bin/activate
-pip install -r requirements.txt
+pip install --upgrade -r requirements.txt
 ```
 
 2. Launch Jupyter
@@ -134,12 +120,12 @@ Ensure DB Service is running at `http://localhost:8080`, then open the URL print
 
 ## Sample data feed
 
-There is a sample data feed in the `samples/data` directory, demonstrating how to use the Python RT library to send streaming data to the DB Service. To run the sample feed:
+There is a sample data feed in the `samples/feed` directory, demonstrating how to use the Python RT library to send streaming data to the DB Service. To run the sample feed:
 
 1. Install dependencies
 
 ```bash
-cd samples/data
+cd samples/feed
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
@@ -164,10 +150,10 @@ curl -s -X POST "http://localhost:8080/api/v0/tables/fxquote" \
   }'
 ```
 
-3. Run the sample feed in a separate terminal from the running DB Service or client session. Alternatively, run the feed in the background with `python3 fxfeed.py &`.
+3. Run the sample feed in a separate terminal from the running DB Service or client session. Alternatively, run the feed in the background with the following.
 
 ```bash
-python3 fxfeed.py
+python3 fxfeed.py &
 ```
 
 The feed runs continuously, publishing FX quote data to the `fxquote` table until you stop it with `Ctrl+C`. It prints a confirmation message when it starts.
