@@ -60,9 +60,9 @@ This chart deploys the DB Service RT component to allow a client to ingest data 
 
 ```bash
 # Run from '.../kxCharts/rt' directory
-RELEASENAME=stream # Unique name for this deployment
+RELEASE_NAME=stream # Unique name for this deployment
 VALUESFILE=myvalues.yaml
-helm install $RELEASENAME . -f $VALUESFILE -n $NAMESPACE
+helm install $RELEASE_NAME . -f $VALUESFILE -n $NAMESPACE
 ```
 
 #### RT Streams naming conventions and discovery
@@ -98,7 +98,7 @@ Helpers within the`rt` chart will check for a prefix of `rt-` and if not present
 Upgrading and updating configuration are executed using `helm upgrade`. This will deploy any changes made to the charts or configuration since the last deploy and automatically redeploy the latest to the application
 
 ```bash
-helm upgrade $RELEASENAME . -f myvalues.yaml -n $NAMESPACE
+helm upgrade $RELEASE_NAME . -f myvalues.yaml -n $NAMESPACE
 ```
 
 ## Configuration Options
@@ -124,6 +124,7 @@ Local values configuration for `rt`.
 | `imagePullSecrets` | `list` | <code>[]</code> | Image pull secrets to be applied to all pods within the chart.<br>For pulling an image from a private repository.<br>Refer to [Image Pull Secrets](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/). |
 | `kxLicenseName` | `string` | <code>"kc.lic"</code> | You must set your license name.<br>Available types are:  - `"kc.lic"`  - `"k4.lic"`  - `"kx.lic"` |
 | `dbsSidecar` | `object` | <code>{}</code> | Default Sidecar configuration for Reliable Transport chart components |
+| `dbsSidecar.enabled` | `bool` | <code>true</code> | Deploy the metrics sidecar and its supporting resources. |
 | `dbsSidecar.image` | `object` | <code>{}</code> | This sets overriding container image information.<br>Use if you wish to target specific versions of the dbsSidecar.<br>More information can be found [here](https://kubernetes.io/docs/concepts/containers/images/). |
 | `dbsSidecar.image.tag` | `string` | <code>"1.18.1"</code> | Image tag. |
 | `livenessProbe` | `object` | <code>{}</code> | Configure Liveness Probe for chart.<br>Refer to [Configure Probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/). |

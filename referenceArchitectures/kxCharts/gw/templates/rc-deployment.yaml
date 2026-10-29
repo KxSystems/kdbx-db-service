@@ -16,7 +16,9 @@ spec:
     metadata:
       annotations:
         checksum/log: {{ include ( print $.Template.BasePath "/qlogconfigmap.yaml" ) . | sha256sum }}
+        {{- if .Values.dbsSidecar.enabled }}
         checksum/config: {{ include ( print $.Template.BasePath "/rc-sidecarconfigmap.yaml" ) . | sha256sum }}
+        {{- end }}
         {{- with .Values.dbsRc.podAnnotations }}
         {{- tpl ( toYaml . ) $ | nindent 8 }}
         {{- end }}
@@ -55,8 +57,10 @@ spec:
             - containerPort: {{ .Values.dbsRc.service.port }}
               protocol: TCP
           env:
+            {{- if .Values.dbsSidecar.enabled }}
             - name: KXI_CONFIG_FILE
               value: "/opt/kx/sidecarConfig/config.json"
+            {{- end }}
             - name: KXI_NAME
               value: sg_rc
             - name: KXI_PORT
@@ -75,13 +79,16 @@ spec:
             - name: tmp
               mountPath: "/tmp"
               readOnly: false
+            {{- if .Values.dbsSidecar.enabled }}
             - name: {{ include "gw.fullname" . }}-rc-sidecar
               mountPath: /opt/kx/sidecarConfig/
+            {{- end }}
             - name: {{ include "gw.fullname" . }}-log
               mountPath: /opt/kx/config
             - name: db-service-kx-license
               mountPath: /opt/kx/lic
               readOnly: true
+        {{- if .Values.dbsSidecar.enabled }}
         - name: sidecar
           image: "{{ .Values.image.repository }}/kxi-sidecar:{{ .Values.dbsSidecar.image.tag | default .Chart.AppVersion }}"
           args: ["-p", "8080" ]
@@ -104,14 +111,17 @@ spec:
             - name: db-service-kx-license
               mountPath: /opt/kx/lic
               readOnly: true
+        {{- end }}
       restartPolicy: Always
       volumes:
         - name: tmp
           emptyDir:
             sizeLimit: 100Mi
+        {{- if .Values.dbsSidecar.enabled }}
         - name: tmp-sidecar
           emptyDir:
             sizeLimit: 100Mi
+        {{- end }}
         - name: db-service-kx-license
           secret:
             defaultMode: 420
@@ -123,9 +133,11 @@ spec:
         {{- with .Values.dbsRc.volumes }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
+        {{- if .Values.dbsSidecar.enabled }}
         - name: {{ include "gw.fullname" . }}-rc-sidecar
           configMap:
             name: {{ include "gw.fullname" . }}-rc-sidecar
+        {{- end }}
         - name: {{ include "gw.fullname" . }}-log
           configMap:
             name: {{ include "gw.fullname" . }}-log

@@ -16,7 +16,9 @@ spec:
     metadata:
       annotations:
         checksum/log: {{ include ( print $.Template.BasePath "/qlogconfigmap.yaml" ) . | sha256sum }}
+        {{- if .Values.dbsSidecar.enabled }}
         checksum/config: {{ include ( print $.Template.BasePath "/agg-sidecarconfigmap.yaml" ) . | sha256sum }}
+        {{- end }}
         helm.sh/revision: {{ .Release.Revision | quote }}
         {{- with .Values.dbsAgg.podAnnotations }}
         {{- tpl ( toYaml . ) $ | nindent 8 }}
@@ -61,8 +63,10 @@ spec:
               value: sg_agg
             - name: KXI_PORT
               value: {{ .Values.dbsAgg.service.port | quote }}
+            {{- if .Values.dbsSidecar.enabled }}
             - name: KXI_CONFIG_FILE
               value: "/opt/kx/sidecarConfig/config.json"
+            {{- end }}
             - name: KXI_SG_RC_ADDR
               value: {{ include "gw.fullname" . }}-rc:{{ .Values.dbsRc.service.port }}
             - name: KXI_LOG_CONFIG
@@ -81,8 +85,10 @@ spec:
             - name: tmp
               mountPath: "/tmp"
               readOnly: false
+            {{- if .Values.dbsSidecar.enabled }}
             - name: {{ include "gw.fullname" . }}-agg-sidecar
               mountPath: /opt/kx/sidecarConfig/
+            {{- end }}
             - name: {{ include "gw.fullname" . }}-log
               mountPath: /opt/kx/config
             - name: db-service-kx-license
@@ -93,6 +99,7 @@ spec:
               readOnly: true
               name: customcode
             {{- end }}
+        {{- if .Values.dbsSidecar.enabled }}
         - name: sidecar
           image: "{{ .Values.image.repository }}/kxi-sidecar:{{ .Values.dbsSidecar.image.tag | default .Chart.AppVersion }}"
           args: ["-p", "8080" ]
@@ -115,13 +122,16 @@ spec:
             - name: db-service-kx-license
               mountPath: /opt/kx/lic
               readOnly: true
+        {{- end }}
       volumes:
         - name: tmp
           emptyDir:
             sizeLimit: 100Mi
+        {{- if .Values.dbsSidecar.enabled }}
         - name: tmp-sidecar
           emptyDir:
             sizeLimit: 100Mi
+        {{- end }}
         - name: db-service-kx-license
           secret:
             defaultMode: 420
@@ -138,9 +148,11 @@ spec:
         {{- with .Values.dbsAgg.volumes }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
+        {{- if .Values.dbsSidecar.enabled }}
         - name: {{ include "gw.fullname" . }}-agg-sidecar
           configMap:
             name: {{ include "gw.fullname" . }}-agg-sidecar
+        {{- end }}
         - name: {{ include "gw.fullname" . }}-log
           configMap:
             name: {{ include "gw.fullname" . }}-log

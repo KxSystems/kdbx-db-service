@@ -1,0 +1,8 @@
+The dashboard workloads are deployed. The gateway still holds KX's sample
+dashboards, so install the P&L dashboard next:
+
+  NAMESPACE={{ .Release.Namespace }} RELEASE_NAME={{ .Values.dbService.release }} ./install-dashboard.sh
+
+then forward the UI to a free local port and open it:
+
+  kubectl port-forward svc/pnl-dashboard 9091:8080 -n {{ .Release.Namespace }}

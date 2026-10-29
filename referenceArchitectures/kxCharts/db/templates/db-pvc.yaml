@@ -9,7 +9,7 @@ metadata:
     app: {{ include "db.fullname" . }}-da
 spec:
   accessModes:
-    - ReadWriteMany
+    {{- toYaml .Values.db.idb.accessModes | nindent 4 }}
   storageClassName: {{ .Values.db.idb.storageClassName }}
   resources:
     requests:
@@ -26,7 +26,7 @@ metadata:
     app: {{ include "db.fullname" . }}-da
 spec:
   accessModes:
-    - ReadWriteMany
+    {{- toYaml .Values.db.hdbt1.accessModes | nindent 4 }}
   storageClassName: {{ .Values.db.hdbt1.storageClassName }}
   resources:
     requests:
@@ -44,7 +44,7 @@ metadata:
     app: {{ include "db.fullname" . }}-da
 spec:
   accessModes:
-    - ReadWriteMany
+    {{- toYaml .Values.db.imports.accessModes | nindent 4 }}
   storageClassName: {{ .Values.db.imports.storageClassName }}
   resources:
     requests:

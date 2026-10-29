@@ -1,8 +1,12 @@
 # kxCharts
 
-Collection of base charts for DB Service reference architectures
+Collection of base Helm charts used by the DB Service reference architectures.
 
-1. [DB Service](./db-service)
+## Charts
+
+- [`db`](./db/) deploys the DB Service database components.
+- [`gw`](./gw/) deploys the DB Service gateway components.
+- [`rt`](./rt/) deploys Reliable Transport.
 
 ## Core Principles
 

@@ -1,0 +1,119 @@
+{
+  "componentType": "datagrid",
+  "name": "P&L by instrument and book",
+  "title": "P&L by instrument / book",
+  "theme": "Dark",
+  "showLoadingIndicators": false,
+  "dataSource": "PnlByKey",
+  "dataSources": [
+    {
+      "name": "PnlByKey",
+      "connection": "pnl",
+      "dataType": "query",
+      "subscriptionType": "polling",
+      "queryString": "`totalpnl xdesc select sym,book,position,avgcost,markpx,realized,unrealized,totalpnl,trades,lastupd from pnlstate",
+      "columns": [
+        "sym",
+        "book",
+        "position",
+        "avgcost",
+        "markpx",
+        "realized",
+        "unrealized",
+        "totalpnl",
+        "trades",
+        "lastupd"
+      ]
+    },
+    {
+      "name": "PnlTotal",
+      "connection": "pnl",
+      "dataType": "query",
+      "subscriptionType": "polling",
+      "queryString": "select totalpnl,realized,unrealized,instruments,books,rows,lastpoll from pnltotal",
+      "columns": [
+        "totalpnl",
+        "realized",
+        "unrealized",
+        "instruments",
+        "books",
+        "rows",
+        "lastpoll"
+      ]
+    }
+  ],
+  "columns": [
+    {
+      "field": "sym",
+      "displayName": "Instrument",
+      "widthWeight": 1
+    },
+    {
+      "field": "book",
+      "displayName": "Book",
+      "widthWeight": 1
+    },
+    {
+      "field": "position",
+      "displayName": "Net Position",
+      "format": "Formatted Number",
+      "precision": 0,
+      "highlightNegativeColor": "#ff6b6b",
+      "widthWeight": 1.2
+    },
+    {
+      "field": "avgcost",
+      "displayName": "Avg Cost",
+      "format": "Number",
+      "precision": 4,
+      "widthWeight": 1.2
+    },
+    {
+      "field": "markpx",
+      "displayName": "Mark",
+      "format": "Number",
+      "precision": 4,
+      "widthWeight": 1.2
+    },
+    {
+      "field": "realized",
+      "displayName": "Realized P&L",
+      "format": "Formatted Number",
+      "precision": 2,
+      "highlightNegativeColor": "#ff6b6b",
+      "widthWeight": 1.4
+    },
+    {
+      "field": "unrealized",
+      "displayName": "Unrealized P&L",
+      "format": "Formatted Number",
+      "precision": 2,
+      "highlightNegativeColor": "#ff6b6b",
+      "widthWeight": 1.4
+    },
+    {
+      "field": "totalpnl",
+      "displayName": "Total P&L",
+      "format": "Formatted Number",
+      "precision": 2,
+      "highlightNegativeColor": "#ff6b6b",
+      "highlightChanges": true,
+      "showArrowsOnChange": true,
+      "widthWeight": 1.5
+    },
+    {
+      "field": "trades",
+      "displayName": "Fills",
+      "format": "Formatted Number",
+      "precision": 0,
+      "widthWeight": 0.8
+    },
+    {
+      "field": "lastupd",
+      "displayName": "Updated",
+      "dateFormat": "YYYY-MM-DD",
+      "timeFormat": "HH:mm:ss",
+      "widthWeight": 1.3
+    }
+  ]
+}

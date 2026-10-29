@@ -16,9 +16,11 @@ spec:
       targetPort: {{ .Values.dbsAgg.service.port }}
       protocol: TCP
       name: agg-tcp
+    {{- if .Values.dbsSidecar.enabled }}
     - port: 8080
       targetPort: metrics
       protocol: TCP
       name: agg-metrics
+    {{- end }}
   selector:
     {{- include "gw.agg.selectorLabels" . | nindent 4 }}

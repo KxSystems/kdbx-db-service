@@ -19,7 +19,9 @@ spec:
     metadata:
       annotations:
         checksum/log: {{ include ( print $.Template.BasePath "/qlogconfigmap.yaml" ) . | sha256sum }}
+        {{- if .Values.dbsSidecar.enabled }}
         checksum/config: {{ include ( print $.Template.BasePath "/sidecarconfigmap.yaml" ) . | sha256sum }}
+        {{- end }}
         {{- with .Values.podAnnotations }}
         {{- tpl ( toYaml . ) $ | nindent 8 }}
         {{- end }}
@@ -99,8 +101,10 @@ spec:
               name: tcp-ext-sub
               protocol: TCP
           env:
+            {{- if .Values.dbsSidecar.enabled }}
             - name: KXI_CONFIG_FILE
               value: "/opt/kx/sidecarConfig/config.json"
+            {{- end }}
             - name: KXI_LOG_CONFIG
               value: /opt/kx/config/qlog.json
             - name: RT_TOPIC_PREFIX
@@ -138,8 +142,10 @@ spec:
             - name: tmp
               mountPath: "/tmp"
               readOnly: false
+            {{- if .Values.dbsSidecar.enabled }}
             - name: {{ include "rt.fullname" . }}-sidecar
               mountPath: /opt/kx/sidecarConfig/
+            {{- end }}
             - name: {{ include "rt.fullname" . }}-log
               mountPath: /opt/kx/config
             - name: db-service-kx-license
@@ -150,6 +156,7 @@ spec:
             {{- with .Values.volumeMounts }}
             {{- tpl ( toYaml . ) $ | nindent 12 }}
             {{- end }}
+        {{- if .Values.dbsSidecar.enabled }}
         - name: sidecar
           image: "{{ .Values.image.repository }}/{{ .Values.dbsSidecar.component | default "kxi-sidecar" }}:{{ .Values.dbsSidecar.image.tag | default .Chart.AppVersion }}"
           args: ["-p", "8080" ]
@@ -172,16 +179,19 @@ spec:
             - name: db-service-kx-license
               mountPath: /opt/kx/lic
               readOnly: true
+        {{- end }}
       volumes:
         - name: tmp
           emptyDir:
             sizeLimit: 100Mi
+        {{- if .Values.dbsSidecar.enabled }}
         - name: tmp-sidecar
           emptyDir:
             sizeLimit: 100Mi
         - name: {{ include "rt.fullname" . }}-sidecar
           configMap:
             name: {{ include "rt.fullname" . }}-sidecar
+        {{- end }}
         - name: {{ include "rt.fullname" . }}-log
           configMap:
             name: {{ include "rt.fullname" . }}-log

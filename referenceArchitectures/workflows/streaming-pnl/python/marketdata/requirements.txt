@@ -1,0 +1,2 @@
+-r ../common/requirements.txt
+# Nothing extra - this feed only publishes.

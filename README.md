@@ -118,6 +118,51 @@ jupyter lab
 
 Ensure DB Service is running at `http://localhost:8080`, then open the URL printed by Jupyter.
 
+### Validation tests
+
+The validation commands start DB Service with Docker Compose, run the selected tests, then tear it down.
+
+These tests execute examples and apply DB-Service-aware checks. They do not compare against the saved output cells in the notebooks. For details on how the validation harness works, how to configure it, and how to add or disable coverage, see [`test/validation/README.md`](test/validation/README.md).
+
+The validation suites are:
+
+- `notebooks`: runs the notebooks in this repo and validates the DB Service operations they perform.
+- `spec_samples`: extracts `x-codeSamples` from `openapi/dbservice.yaml`, runs them for the selected client, and validates the resulting DB Service state.
+- `client_readmes`: extracts runnable examples from the qClient or Python client README and validates them against DB Service.
+
+The default command runs all DB Service repo notebook tests against main code:
+
+```bash
+make validate
+```
+
+Run notebook tests for a single client:
+
+```bash
+make validate TEST_SUITE=notebooks TEST_FILTER=curl
+make validate TEST_SUITE=notebooks TEST_FILTER=python
+make validate TEST_SUITE=notebooks TEST_FILTER=qClient
+```
+
+Run OpenAPI spec sample tests:
+
+```bash
+make validate TEST_SUITE=spec_samples TEST_FILTER=curl
+make validate TEST_SUITE=spec_samples TEST_FILTER=python
+make validate TEST_SUITE=spec_samples TEST_FILTER=qClient
+```
+
+Run client repo README tests:
+
+```bash
+make validate TEST_SUITE=client_readmes TEST_FILTER=python
+make validate TEST_SUITE=client_readmes TEST_FILTER=qClient
+```
+
+Use `CODE_PROFILE=main`, `release`, or `local` to choose all three code sources together. Override one component with `CODE_DBS`, `CODE_QCLIENT`, or `CODE_PYCLIENT`; these also accept an exact DB Service release version, a client GitLab ref, or a local client checkout path as appropriate. Validation defaults to main DB Service images and main client source. Use `TEST_SOURCE` to select an exact input file and `TEST_FILTER` to select a client.
+
+Validation output prints the exact examples and sources in use, followed by one live result for each check. Add `VERBOSE=1` to include Docker setup, `RUN` lines, and detailed intermediate checks; full output details are documented in `test/validation/README.md`.
+
 ## Sample data feed
 
 There is a sample data feed in the `samples/feed` directory, demonstrating how to use the Python RT library to send streaming data to the DB Service. To run the sample feed:

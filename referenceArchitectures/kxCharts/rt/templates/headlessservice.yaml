@@ -54,9 +54,11 @@ spec:
     - name: tcp-ext-sub
       port: 5006
       targetPort: tcp-ext-sub
+    {{- if .Values.dbsSidecar.enabled }}
     - name: http-metrics
       port: 8080
       protocol: TCP
       targetPort: metrics
+    {{- end }}
   selector:
     {{- include "rt.selectorLabels" . | nindent 4 }}

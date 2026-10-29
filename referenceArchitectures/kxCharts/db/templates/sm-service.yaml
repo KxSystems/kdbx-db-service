@@ -15,9 +15,11 @@ spec:
     - name: sm-qipc
       port: {{ .Values.dbsSm.service.port }}
       targetPort: {{ .Values.dbsSm.service.port }}
+    {{- if .Values.dbsSidecar.enabled }}
     - name: http-metrics
       port: 8080
       protocol: TCP
       targetPort: http-metrics
+    {{- end }}
   selector:
     {{- include "db.sm.selectorLabels" . | nindent 4 }}

@@ -1,0 +1,138 @@
+x-q-workload: &q-workload
+  image: sim-streaming-pnl-q:${IMAGE_TAG:-local}
+  cgroup_parent: ${DS_CGROUP_PARENT:-}
+  mem_limit: ${DS_OTHER_MEM_LIMIT:-0}
+  restart: unless-stopped
+  networks:
+    - kx-db
+
+x-q-environment: &q-environment
+  QHOME: /opt/kx
+  QLIC: /opt/kx/lic
+  RT_QPK_DIR: /opt/kx/app/rt
+  SIM_Q_DIR: /app/q
+  RT_PUBLISH_ENDPOINTS: kx-db-rt:5002
+  RT_TOPIC: data
+  RT_DIR: /tmp/rt
+  RT_LOG_PATH: /tmp/rt
+  RT_LOGLEVEL_CONSOLE: ERROR
+  RT_LOGFORMAT_CONSOLE: txt
+  SIM_SYMBOLS: ${SIM_SYMBOLS:-}
+  SIM_TICKER_SUFFIX: ${SIM_TICKER_SUFFIX:-US}
+  SIM_EXCH: ${SIM_EXCH:-US}
+  SIM_CCY: ${SIM_CCY:-USD}
+
+services:
+  streaming-pnl-q-license-init:
+    image: alpine:3.20
+    user: "0:0"
+    restart: "no"
+    environment:
+      KDB_LICENSE_B64: ${KDB_LICENSE_B64:-}
+      KDB_K4LICENSE_B64: ${KDB_K4LICENSE_B64:-}
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        rm -f /license/*.lic
+        if [ -n "$${KDB_K4LICENSE_B64}" ]; then
+          printf '%s' "$${KDB_K4LICENSE_B64}" | base64 -d > /license/k4.lic
+          license=/license/k4.lic
+        elif [ -n "$${KDB_LICENSE_B64}" ]; then
+          printf '%s' "$${KDB_LICENSE_B64}" | base64 -d > /license/kc.lic
+          license=/license/kc.lic
+        else
+          echo "Set KDB_LICENSE_B64 or KDB_K4LICENSE_B64 in the root .env file." >&2
+          exit 1
+        fi
+        chown 65534:65534 "$${license}"
+        chmod 400 "$${license}"
+    volumes:
+      - streaming-pnl-q-license:/license
+
+  sim-marketdata:
+    <<: *q-workload
+    container_name: sim-marketdata
+    command: ["/app/q/marketdata.q", "-q"]
+    depends_on:
+      streaming-pnl-q-license-init:
+        condition: service_completed_successfully
+      kx-db-rt:
+        condition: service_started
+    volumes:
+      - ./data/rt-client-md:/tmp/rt
+      - streaming-pnl-q-license:/opt/kx/lic:ro
+    environment:
+      <<: *q-environment
+      RT_CLIENT_NAME: dbs-q-mdpub
+      MD_TABLE: mdquote
+      MD_TICK_INTERVAL: ${MD_TICK_INTERVAL:-1.0}
+      MD_VOL_BPS: ${MD_VOL_BPS:-5}
+      MD_SPREAD_BPS: ${MD_SPREAD_BPS:-2}
+      MD_MEAN_REVERT: ${MD_MEAN_REVERT:-0.02}
+      MD_LOG_EVERY: ${MD_LOG_EVERY:-100}
+
+  sim-oms:
+    <<: *q-workload
+    container_name: sim-oms
+    command: ["/app/q/oms.q", "-q"]
+    depends_on:
+      streaming-pnl-q-license-init:
+        condition: service_completed_successfully
+      kx-db-rt:
+        condition: service_started
+      kx-db-gw:
+        condition: service_started
+    volumes:
+      - ./data/rt-client-oms:/tmp/rt
+      - streaming-pnl-q-license:/opt/kx/lic:ro
+    environment:
+      <<: *q-environment
+      RT_CLIENT_NAME: dbs-q-omspub
+      OMS_TABLE: omstrade
+      OMS_TRADES_PER_SEC: ${OMS_TRADES_PER_SEC:-3}
+      OMS_BOOKS: ${OMS_BOOKS:-ALPHA,BETA,GAMMA,DELTA,MACRO}
+      OMS_REF_SOURCE: dbservice
+      OMS_DBS_QIPC_ENDPOINT: kx-db-gw:5040
+      OMS_REF_TABLE: mdquote
+      OMS_REF_LOOKBACK_SECS: ${OMS_REF_LOOKBACK_SECS:-60}
+      OMS_REF_LIMIT: ${OMS_REF_LIMIT:-5000}
+      OMS_REF_REFRESH_SECS: ${OMS_REF_REFRESH_SECS:-1}
+      OMS_SLIPPAGE_BPS: ${OMS_SLIPPAGE_BPS:-1}
+      OMS_LOG_EVERY: ${OMS_LOG_EVERY:-50}
+
+  sim-pnl:
+    <<: *q-workload
+    container_name: sim-pnl
+    command: ["/app/q/pnl.q", "-q"]
+    depends_on:
+      streaming-pnl-q-license-init:
+        condition: service_completed_successfully
+      kx-db-rt:
+        condition: service_started
+    volumes:
+      - ./data/rt-client-pnl:/tmp/rt
+      - streaming-pnl-q-license:/opt/kx/lic:ro
+    environment:
+      <<: *q-environment
+      RT_SUB_ENDPOINTS: kx-db-rt:5003
+      RT_SUB_PORT: "5003"
+      RT_REPL_PORT: "5001"
+      RT_STREAM_ID: data
+      RT_SOURCE: data
+      RT_TOPIC_PREFIX: rt-
+      RT_REPLICAS: "1"
+      RT_SUB_POSITION: "0"
+      PNL_PUB_CLIENT_NAME: dbs-q-pnlpub
+      PNL_SUB_CLIENT_NAME: dbs-q-pnlsub
+      PNL_TABLE: pnlstate
+      PNL_QUOTE_TABLE: mdquote
+      PNL_TRADE_TABLE: omstrade
+      PNL_KEY: ${PNL_KEY:-sym+book}
+      PNL_MARK_PRICE: ${PNL_MARK_PRICE:-mid}
+      PNL_MIN_PUBLISH_INTERVAL: ${PNL_MIN_PUBLISH_INTERVAL:-5}
+      PNL_WARMUP_LAG: ${PNL_WARMUP_LAG:-5}
+      PNL_LOG_EVERY: ${PNL_LOG_EVERY:-100}
+
+volumes:
+  streaming-pnl-q-license:

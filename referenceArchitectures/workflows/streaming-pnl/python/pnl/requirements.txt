@@ -1,0 +1,4 @@
+-r ../common/requirements.txt
+# Nothing extra: sim_pnl both subscribes and publishes through rtpy, and
+# decodes messages with pykx (which kxi-rtpy already pulls in). It does not
+# read from the gateway, so it needs no DB Service client.

@@ -20,7 +20,9 @@ spec:
     metadata:
       annotations:
         checksum/log: {{ include ( print $.Template.BasePath "/da-qlogconfigmap.yaml" ) . | sha256sum }}
+        {{- if .Values.dbsSidecar.enabled }}
         checksum/sidecarConfig: {{ include ( print $.Template.BasePath "/da-sidecarconfigmap.yaml" ) . | sha256sum }}
+        {{- end }}
         checksum/customCodeConfig: {{ include ( print $.Template.BasePath "/da-customcodeconfigmap.yaml" ) . | sha256sum }}
         {{- with .Values.podAnnotations }}
         {{- tpl ( toYaml . ) $ | nindent 8 }}
@@ -64,8 +66,10 @@ spec:
             {{- toYaml . | nindent 12 }}
           {{- end }}
           env:
+            {{- if .Values.dbsSidecar.enabled }}
             - name: KXI_CONFIG_FILE
               value: "/opt/kx/sidecarConfig/config.json"
+            {{- end }}
             - name: KXI_LOG_CONFIG
               value: /opt/kx/config/qlog.json
             - name: KXI_NAME
@@ -84,8 +88,10 @@ spec:
               value: {{ .Values.stream.name | quote }}
             - name: RT_REPLICAS
               value: {{ .Values.stream.replicas | quote }}
+            {{- if .Values.dbsSidecar.enabled }}
             - name: KXI_DA_START_SIDECARS
               value: "true"
+            {{- end }}
             - name: KXI_ASSEMBLY_FILE
               value: /mnt/config/assembly.yaml
             - name: KXI_SECURE_ENABLED
@@ -108,9 +114,11 @@ spec:
             - name: tmp
               mountPath: "/tmp"
               readOnly: false
+            {{- if .Values.dbsSidecar.enabled }}
             - name: {{ include "db.fullname" . }}-da-sidecar
               mountPath: /opt/kx/sidecarConfig/config.json
               subPath: config.json
+            {{- end }}
             - name: {{ include "db.fullname" . }}-dalog
               mountPath: /opt/kx/config
             - name: db-service-kx-license
@@ -137,6 +145,7 @@ spec:
             - mountPath: /opt/kx/packages
               readOnly: true
               name: customcode
+        {{- if .Values.dbsSidecar.enabled }}
         - name: sidecar
           image: "{{ .Values.image.repository }}/kxi-sidecar:{{ .Values.dbsSidecar.image.tag | default .Chart.AppVersion }}"
           args: ["-p", "8085" ]
@@ -159,14 +168,17 @@ spec:
             - name: db-service-kx-license
               mountPath: /opt/kx/lic
               readOnly: true
+        {{- end }}
       restartPolicy: Always
       volumes:
         - name: tmp
           emptyDir:
             sizeLimit: 100Mi
+        {{- if .Values.dbsSidecar.enabled }}
         - name: tmp-sidecar
           emptyDir:
             sizeLimit: 100Mi
+        {{- end }}
         - name: db-service-kx-license
           secret:
             defaultMode: 420
@@ -181,9 +193,11 @@ spec:
         {{- end }}
         - name: db-root
           emptyDir: {}
+        {{- if .Values.dbsSidecar.enabled }}
         - name: {{ include "db.fullname" . }}-da-sidecar
           configMap:
             name: {{ include "db.fullname" . }}-da-sidecar
+        {{- end }}
         - name: {{ include "db.fullname" . }}-dalog
           configMap:
             name: {{ include "db.fullname" . }}-dalog

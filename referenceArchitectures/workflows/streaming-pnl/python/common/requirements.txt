@@ -1,0 +1,4 @@
+# Shared by both simulators: the KX Python RT client.
+# pykx (needed for kx.toq) comes in as a dependency of kxi-rtpy.
+--extra-index-url https://portal.dl.kx.com/assets/pypi/
+kxi-rtpy

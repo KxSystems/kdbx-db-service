@@ -151,9 +151,21 @@ paths:
       - lang: q
         label: q
         source: |
-          session.querySimple[`table`startTS`endTS`sortCols`limit!(`fxquote;2026.03.02D;2026.03.03D;enlist "ts"; 5)]
+          session.querySimple[`fxquote;([startTS:2026.03.02D;endTS:2026.03.03D;sortCols:enlist"ts";limit:5])]
       - lang: cURL
-        label: cURL
+        label: cURL (single assembly)
+        source: |
+          curl -s -X POST "http://localhost:8080/api/v0/query/simple" \
+            -H "Accept: application/json" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "table": "fxquote",
+              "startTS": "2026.03.02D00:00:00",
+              "endTS": "2026.03.03D00:00:00",
+              "limit": 2
+            }' | jq
+      - lang: cURL
+        label: cURL (multi-assembly)
         source: |
           curl -s -X POST "http://localhost:8080/api/v0/query/simple" \
             -H "Accept: application/json" \
@@ -277,9 +289,21 @@ paths:
       - lang: q
         label: q
         source: |
-          session.queryPreview[`table`startTS`endTS`limit!(`fxquote;2026.03.02D;2026.03.03D;5)]
+          session.queryPreview[`fxquote;([startTS:2026.03.02D;endTS:2026.03.03D;limit:5])]
       - lang: cURL
-        label: cURL
+        label: cURL (single assembly)
+        source: |
+          curl -s -X POST "http://localhost:8080/api/v0/query/preview" \
+            -H "Accept: application/json" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "table": "fxquote",
+              "startTS": "2026.03.02D00:00:00",
+              "endTS": "2026.03.03D00:00:00",
+              "limit": 5
+            }' | jq
+      - lang: cURL
+        label: cURL (multi-assembly)
         source: |
           curl -s -X POST "http://localhost:8080/api/v0/query/preview" \
             -H "Accept: application/json" \
@@ -377,9 +401,16 @@ paths:
       - lang: q
         label: q
         source: |
-          session.querySQL[enlist[`query]!enlist "SELECT * FROM instruments WHERE category LIKE 'EM'"]
+          session.querySQL["SELECT * FROM instruments WHERE category LIKE 'EM'"]
       - lang: cURL
-        label: cURL
+        label: cURL (single assembly)
+        source: |
+          curl -s -X POST "http://localhost:8080/api/v0/query/sql" \
+            -H "Accept: application/json" \
+            -H "Content-Type: application/json" \
+            -d '{"query": "SELECT * FROM instruments WHERE category LIKE '\''EM'\''"}' | jq
+      - lang: cURL
+        label: cURL (multi-assembly)
         source: |
           curl -s -X POST "http://localhost:8080/api/v0/query/sql" \
             -H "Accept: application/json" \
@@ -471,9 +502,16 @@ paths:
       - lang: q
         label: q
         source: |
-          session.queryQ[enlist[`query]!enlist "select o:first bid,h:max bid,l:min bid,c:last bid by trddate,sym from fxquote"]
+          session.queryQ["select o:first bid,h:max bid,l:min bid,c:last bid by trddate,sym from fxquote"]
       - lang: cURL
-        label: cURL
+        label: cURL (single assembly)
+        source: |
+          curl -s -X POST "http://localhost:8080/api/v0/query/q" \
+            -H "Accept: application/json" \
+            -H "Content-Type: application/json" \
+            -d '{"query": "select o:first bid,h:max bid,l:min bid,c:last bid by trddate,sym from fxquote"}' | jq
+      - lang: cURL
+        label: cURL (multi-assembly)
         source: |
           curl -s -X POST "http://localhost:8080/api/v0/query/q" \
             -H "Accept: application/json" \
@@ -583,16 +621,16 @@ paths:
         label: Python (single assembly)
         source: session.get_import(job_id="3fa85f64-5717-4562-b3fc-2c963f66afa6")
       - lang: Python
-        label: Python (specific assembly)
+        label: Python (multi-assembly)
         source: session.get_import(job_id="3fa85f64-5717-4562-b3fc-2c963f66afa6", assembly="marketdata-emea")
       - lang: q
         label: q (single assembly)
         source: |
           session.getImport["3fa85f64-5717-4562-b3fc-2c963f66afa6"]
       - lang: q
-        label: q (specific assembly)
+        label: q (multi-assembly)
         source: |
-          session.getImport[`jobId`assembly!("3fa85f64-5717-4562-b3fc-2c963f66afa6";"marketdata-emea")]
+          session.getImport["3fa85f64-5717-4562-b3fc-2c963f66afa6";([assembly:"marketdata-emea"])]
       - lang: cURL
         label: cURL (single assembly)
         source: |
@@ -600,7 +638,7 @@ paths:
             -H "Accept: application/json" | jq
           # Note: Replace `NAME` above, with the "name" value returned from the import job.
       - lang: cURL
-        label: cURL (specific assembly)
+        label: cURL (multi-assembly)
         source: |
           curl -X GET "http://localhost:8080/api/v0/imports/NAME?assembly=marketdata-emea" \
             -H "Accept: application/json" | jq
@@ -662,16 +700,16 @@ paths:
         label: Python (single assembly)
         source: session.cancel_import(job_id="3fa85f64-5717-4562-b3fc-2c963f66afa6")
       - lang: Python
-        label: Python (specific assembly)
+        label: Python (multi-assembly)
         source: session.cancel_import(job_id="3fa85f64-5717-4562-b3fc-2c963f66afa6", assembly="marketdata-emea")
       - lang: q
         label: q (single assembly)
         source: |
           session.cancelImport["3fa85f64-5717-4562-b3fc-2c963f66afa6"]
       - lang: q
-        label: q (specific assembly)
+        label: q (multi-assembly)
         source: |
-          session.cancelImport[`jobId`assembly!("3fa85f64-5717-4562-b3fc-2c963f66afa6";"marketdata-emea")]
+          session.cancelImport["3fa85f64-5717-4562-b3fc-2c963f66afa6";([assembly:"marketdata-emea"])]
       - lang: cURL
         label: cURL (single assembly)
         source: |
@@ -679,7 +717,7 @@ paths:
             -H "Accept: application/json" | jq
           # Note: Replace `NAME` above, with the "name" value returned from the import job.
       - lang: cURL
-        label: cURL (specific assembly)
+        label: cURL (multi-assembly)
         source: |
           curl -X DELETE "http://localhost:8080/api/v0/imports/NAME?assembly=marketdata-emea" \
             -H "Accept: application/json" | jq
@@ -804,7 +842,7 @@ paths:
             path="fxquote.parquet"
           )
       - lang: Python
-        label: Python (specific assembly)
+        label: Python (multi-assembly)
         source: |
           session.import_files(
             table="fxquote",
@@ -812,7 +850,18 @@ paths:
             assembly="marketdata-emea"
           )
       - lang: Python
-        label: Python (standard file ingest)
+        label: Python (standard file ingest, single assembly)
+        source: |
+          session.import_files(
+            table="fxquote",
+            path="fxquote.csv.gz",
+            format="csv",
+            delimiter=",",
+            decimal=".",
+            headerRowIndex= 0
+          )
+      - lang: Python
+        label: Python (standard file ingest, multi-assembly)
         source: |
           session.import_files(
             table="fxquote",
@@ -824,7 +873,19 @@ paths:
             headerRowIndex= 0
           )
       - lang: Python
-        label: Python (postparse + create table)
+        label: Python (postparse + create table, single assembly)
+        source: |
+          session.import_files(
+            table="forex",
+            path="forex.csv",
+            format="csv",
+            types="SFFDV",
+            createTable=True,
+            include=["sym", "bid", "ask", "time"],
+            postparse={"time": "data[`date] + data`time"}
+          )
+      - lang: Python
+        label: Python (postparse + create table, multi-assembly)
         source: |
           session.import_files(
             table="forex",
@@ -839,21 +900,39 @@ paths:
       - lang: q
         label: q (single assembly)
         source: |
-          session.importFiles[`table`path!("fxquote";"fxquote.parquet")]
+          session.importFiles["fxquote";"fxquote.parquet"]
       - lang: q
-        label: q (specific assembly)
+        label: q (multi-assembly)
         source: |
-          session.importFiles[`table`path`assembly!("fxquote";"fxquote.parquet";"marketdata-emea")]
+          session.importFiles["fxquote";"fxquote.parquet";([assembly:"marketdata-emea"])]
       - lang: q
-        label: q (standard file ingest)
+        label: q (standard file ingest, single assembly)
         source: |
-          session.importFiles[`table`path`assembly`format`delimiter`decimal`headerRowIndex!("fxquote";"fxquote.csv.gz";"marketdata-emea";"csv";",";".";0)]
+          session.importFiles["fxquote";"fxquote.csv.gz";([format:"csv";delimiter:",";decimal:".";headerRowIndex:0])]
       - lang: q
-        label: q (postparse + create table)
+        label: q (standard file ingest, multi-assembly)
         source: |
-          session.importFiles([table:"forex";path:"forex.csv";assembly:"marketdata-emea";format:"csv";types:"SFFDV";createTable:1b;include:("sym";"bid";"ask";"time");postparse:([time:"data[`date] + data`time"])])
+          session.importFiles["fxquote";"fxquote.csv.gz";([assembly:"marketdata-emea";format:"csv";delimiter:",";decimal:".";headerRowIndex:0])]
+      - lang: q
+        label: q (postparse + create table, single assembly)
+        source: |
+          session.importFiles["forex";"forex.csv";([format:"csv";types:"SFFDV";createTable:1b;include:("sym";"bid";"ask";"time");postparse:([time:"data[`date] + data`time"])])]
+      - lang: q
+        label: q (postparse + create table, multi-assembly)
+        source: |
+          session.importFiles["forex";"forex.csv";([assembly:"marketdata-emea";format:"csv";types:"SFFDV";createTable:1b;include:("sym";"bid";"ask";"time");postparse:([time:"data[`date] + data`time"])])]
       - lang: cURL
-        label: cURL (minimal request)
+        label: cURL (minimal request, single assembly)
+        source: |
+          curl -s -X POST "http://localhost:8080/api/v0/imports/files" \
+            -H "Accept: application/json" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "table": "fxquote",
+              "path": "fxquote.parquet"
+            }' | jq
+      - lang: cURL
+        label: cURL (minimal request, multi-assembly)
         source: |
           curl -s -X POST "http://localhost:8080/api/v0/imports/files?assembly=marketdata-emea" \
             -H "Accept: application/json" \
@@ -863,7 +942,21 @@ paths:
               "path": "fxquote.parquet"
             }' | jq
       - lang: cURL
-        label: cURL (standard file ingest)
+        label: cURL (standard file ingest, single assembly)
+        source: |
+          curl -s -X POST "http://localhost:8080/api/v0/imports/files" \
+            -H "Accept: application/json" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "table": "fxquote",
+              "path": "fxquote.csv.gz",
+              "format": "csv",
+              "delimiter": ",",
+              "decimal": ".",
+              "headerRowIndex": 0
+            }' | jq
+      - lang: cURL
+        label: cURL (standard file ingest, multi-assembly)
         source: |
           curl -s -X POST "http://localhost:8080/api/v0/imports/files?assembly=marketdata-emea" \
             -H "Accept: application/json" \
@@ -877,7 +970,22 @@ paths:
               "headerRowIndex": 0
             }' | jq
       - lang: cURL
-        label: cURL (postparse + create table)
+        label: cURL (postparse + create table, single assembly)
+        source: |
+          curl -s -X POST "http://localhost:8080/api/v0/imports/files" \
+            -H "Accept: application/json" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "table": "forex",
+              "path": "forex.csv",
+              "format": "csv",
+              "types": "SFFDV",
+              "createTable": true,
+              "include": ["sym", "bid", "ask", "time"],
+              "postparse": {"time": "data[`date] + data`time"}
+            }' | jq
+      - lang: cURL
+        label: cURL (postparse + create table, multi-assembly)
         source: |
           curl -s -X POST "http://localhost:8080/api/v0/imports/files?assembly=marketdata-emea" \
             -H "Accept: application/json" \
@@ -959,16 +1067,16 @@ paths:
         label: Python (single assembly)
         source: session.import_database(path="fxquote-hdb")
       - lang: Python
-        label: Python (specific assembly)
+        label: Python (multi-assembly)
         source: session.import_database(path="fxquote-hdb", assembly="marketdata-emea")
       - lang: q
         label: q (single assembly)
         source: |
-          session.importKDB[enlist[`path]!enlist"fxquote-hdb"]
+          session.importKDB["fxquote-hdb"]
       - lang: q
-        label: q (specific assembly)
+        label: q (multi-assembly)
         source: |
-          session.importKDB[`path`assembly!("fxquote-hdb";"marketdata-emea")]
+          session.importKDB["fxquote-hdb";([assembly:"marketdata-emea"])]
       - lang: cURL
         label: cURL (single assembly)
         source: |
@@ -977,7 +1085,7 @@ paths:
             -H "Content-Type: application/json" \
             -d '{"path": "fxquote-hdb"}' | jq
       - lang: cURL
-        label: cURL (specific assembly)
+        label: cURL (multi-assembly)
         source: |
           curl -X POST "http://localhost:8080/api/v0/imports/kdb?assembly=marketdata-emea" \
             -H "Accept: application/json" \
@@ -1122,7 +1230,20 @@ paths:
         '503': *id503
       x-codeSamples:
       - lang: Python
-        label: Python (rows payload)
+        label: Python (rows payload, single assembly)
+        source: |
+          session.import_data(
+            table="fxquote",
+            data=[
+              ["2026-01-21", "2026-01-21T10:00:00.000", "EURUSD", 901.2, 901.3],
+              ["2026-01-21", "2026-01-21T10:00:00.000", "EURUSD", 901.2, 901.3]
+            ],
+            columnNames=["trddate", "ts", "sym", "bid", "ask"],
+            insert_as="rows"
+          )
+          # Note: for rows payload, columnNames are required.
+      - lang: Python
+        label: Python (rows payload, multi-assembly)
         source: |
           session.import_data(
             table="fxquote",
@@ -1136,8 +1257,22 @@ paths:
           )
           # Note: for rows payload, columnNames are required.
       - lang: Python
-        label: Python (objects payload)
+        label: Python (objects payload, single assembly)
         source: | 
+          session.import_data(
+            table="instruments",
+            data=[
+              {"instrumentid":77, "sym":"USDBRL", "category":"EM", "decimals":4, "pipdecimals": 4},
+              {"instrumentid":78, "sym":"USDKRW", "category":"EM", "decimals":2, "pipdecimals": 2},
+            ],
+            createTable=True,
+            columnNames=["instrumentid", "sym", "category", "decimals", "pipdecimals"],
+            types="fssff",
+            insert_as="objects"
+          )
+      - lang: Python
+        label: Python (objects payload, multi-assembly)
+        source: |
           session.import_data(
             table="instruments",
             assembly="marketdata-emea",
@@ -1151,18 +1286,45 @@ paths:
             insert_as="objects"
           )
       - lang: q
-        label: q (rows payload)
+        label: q (rows payload, single assembly)
         source: |
           data:(("2026-01-21";"2026-01-21T10:00:00.000";"EURUSD";901.2;901.3);("2026-01-21";"2026-01-21T10:00:00.000";"EURUSD";901.2;901.3));
-          session.importData[`table`assembly`data`columnNames!(`fxquote;"marketdata-emea";data;(`trddate`ts`sym`bid`ask))]
+          session.importData[`fxquote;data;([columnNames:`trddate`ts`sym`bid`ask])]
           # Note: for rows payload, columnNames are required.
       - lang: q
-        label: q (objects payload)
+        label: q (rows payload, multi-assembly)
+        source: |
+          data:(("2026-01-21";"2026-01-21T10:00:00.000";"EURUSD";901.2;901.3);("2026-01-21";"2026-01-21T10:00:00.000";"EURUSD";901.2;901.3));
+          session.importData[`fxquote;data;([assembly:"marketdata-emea";columnNames:`trddate`ts`sym`bid`ask])]
+          # Note: for rows payload, columnNames are required.
+      - lang: q
+        label: q (objects payload, single assembly)
         source: |
           data:((`instrumentid`sym`category`decimals`pipdecimals)!(77;"USDBRL";"EM";4;4);(`instrumentid`sym`category`decimals`pipdecimals)!(78;"USDKRW";"EM";2;2));
-          session.importData([table:`instruments;assembly:"marketdata-emea";data;createTable:1b;columnNames:`instrumentid`sym`category`decimals`pipdecimals;types:"fssff"])
+          session.importData[`instruments;data;([createTable:1b;columnNames:`instrumentid`sym`category`decimals`pipdecimals;types:"fssff"])]
+      - lang: q
+        label: q (objects payload, multi-assembly)
+        source: |
+          data:((`instrumentid`sym`category`decimals`pipdecimals)!(77;"USDBRL";"EM";4;4);(`instrumentid`sym`category`decimals`pipdecimals)!(78;"USDKRW";"EM";2;2));
+          session.importData[`instruments;data;([assembly:"marketdata-emea";createTable:1b;columnNames:`instrumentid`sym`category`decimals`pipdecimals;types:"fssff"])]
       - lang: cURL
-        label: cURL (rows payload)
+        label: cURL (rows payload, single assembly)
+        source: |
+          curl -s -X POST "http://localhost:8080/api/v0/imports/data" \
+            -H "Accept: application/json" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "table": "fxquote",
+              "data": [
+                ["2026-01-21", "2026-01-21T10:00:00.000", "EURUSD", 901.2, 901.3],
+                ["2026-01-21", "2026-01-21T10:00:00.000", "EURUSD", 901.2, 901.3]
+              ],
+              "columnNames": ["trddate", "ts", "sym", "bid", "ask"],
+              "insert_as": "rows"
+            }' | jq
+          # Note: for rows payload, columnNames are required.
+      - lang: cURL
+        label: cURL (rows payload, multi-assembly)
         source: |
           curl -s -X POST "http://localhost:8080/api/v0/imports/data?assembly=marketdata-emea" \
             -H "Accept: application/json" \
@@ -1178,7 +1340,23 @@ paths:
             }' | jq
           # Note: for rows payload, columnNames are required.
       - lang: cURL
-        label: cURL (objects payload)
+        label: cURL (objects payload, single assembly)
+        source: |
+          curl -s -X POST "http://localhost:8080/api/v0/imports/data" \
+            -H "Accept: application/json" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "table": "instruments",
+              "data": [
+                {"instrumentid": 77, "sym": "USDBRL", "category": "EM", "decimals": 4, "pipdecimals": 4},
+                {"instrumentid": 78, "sym": "USDKRW", "category": "EM", "decimals": 2, "pipdecimals": 2}
+              ],
+              "createTable": true,
+              "columnNames": ["instrumentid", "sym", "category", "decimals", "pipdecimals"],
+              "types": "fssff"
+            }' | jq
+      - lang: cURL
+        label: cURL (objects payload, multi-assembly)
         source: |
           curl -s -X POST "http://localhost:8080/api/v0/imports/data?assembly=marketdata-emea" \
             -H "Accept: application/json" \
@@ -1322,7 +1500,7 @@ paths:
           )
           # An empty filter is mandatory to delete every row in the window - a missing filter is rejected.
       - lang: Python
-        label: Python (specific assembly)
+        label: Python (multi-assembly)
         source: |
           session.delete_rows(
               table="trade",
@@ -1334,15 +1512,15 @@ paths:
       - lang: q
         label: q (matching rows)
         source: |
-          session.deleteRows[`table`startTS`endTS`filter!("trade";2026.04.03D00:00:00.000000000;2026.04.04D00:00:00.000000000;enlist("=";"sym";"AAPL"))]
+          session.deleteRows["trade";enlist("=";"sym";"AAPL");([startTS:2026.04.03D;endTS:2026.04.04D])]
       - lang: q
         label: q (all rows in window)
         source: |
-          session.deleteRows[`table`startTS`endTS`filter!("trade";2026.04.03D00:00:00.000000000;2026.04.04D00:00:00.000000000;())]
+          session.deleteRows["trade";();([startTS:2026.04.03D;endTS:2026.04.04D])]
       - lang: q
-        label: q (specific assembly)
+        label: q (multi-assembly)
         source: |
-          session.deleteRows[([table:"trade";startTS:2026.04.03D00:00:00.000000000;endTS:2026.04.04D00:00:00.000000000;filter:enlist("=";"sym";"AAPL");assembly:"marketdata-emea"])]
+          session.deleteRows["trade";enlist("=";"sym";"AAPL");([startTS:2026.04.03D;endTS:2026.04.04D;assembly:"marketdata-emea"])]
       - lang: cURL
         label: cURL (single assembly)
         source: |
@@ -1356,7 +1534,7 @@ paths:
               "filter": [["=", "sym", "AAPL"]]
             }' | jq
       - lang: cURL
-        label: cURL (specific assembly)
+        label: cURL (multi-assembly)
         source: |
           curl -s -X POST "http://localhost:8080/api/v0/deletes?assembly=marketdata-emea" \
             -H "Accept: application/json" \
@@ -1450,16 +1628,16 @@ paths:
         label: Python (single assembly)
         source: session.get_delete(job_id="54f5cf87-dbc2-4336-d109-173ed56c0b86")
       - lang: Python
-        label: Python (specific assembly)
+        label: Python (multi-assembly)
         source: session.get_delete(job_id="54f5cf87-dbc2-4336-d109-173ed56c0b86", assembly="marketdata-emea")
       - lang: q
         label: q (single assembly)
         source: |
           session.getDelete["54f5cf87-dbc2-4336-d109-173ed56c0b86"]
       - lang: q
-        label: q (specific assembly)
+        label: q (multi-assembly)
         source: |
-          session.getDelete[`jobId`assembly!("54f5cf87-dbc2-4336-d109-173ed56c0b86";"marketdata-emea")]
+          session.getDelete["54f5cf87-dbc2-4336-d109-173ed56c0b86";([assembly:"marketdata-emea"])]
       - lang: cURL
         label: cURL (single assembly)
         source: |
@@ -1467,7 +1645,7 @@ paths:
             -H "Accept: application/json" | jq
           # Note: Replace `NAME` above, with the "jobId" value returned from the delete job.
       - lang: cURL
-        label: cURL (specific assembly)
+        label: cURL (multi-assembly)
         source: |
           curl -X GET "http://localhost:8080/api/v0/deletes/NAME?assembly=marketdata-emea" \
             -H "Accept: application/json" | jq
@@ -1525,16 +1703,16 @@ paths:
         label: Python (single assembly)
         source: session.cancel_delete(job_id="54f5cf87-dbc2-4336-d109-173ed56c0b86")
       - lang: Python
-        label: Python (specific assembly)
+        label: Python (multi-assembly)
         source: session.cancel_delete(job_id="54f5cf87-dbc2-4336-d109-173ed56c0b86", assembly="marketdata-emea")
       - lang: q
         label: q (single assembly)
         source: |
           session.cancelDelete["54f5cf87-dbc2-4336-d109-173ed56c0b86"]
       - lang: q
-        label: q (specific assembly)
+        label: q (multi-assembly)
         source: |
-          session.cancelDelete[`jobId`assembly!("54f5cf87-dbc2-4336-d109-173ed56c0b86";"marketdata-emea")]
+          session.cancelDelete["54f5cf87-dbc2-4336-d109-173ed56c0b86";([assembly:"marketdata-emea"])]
       - lang: cURL
         label: cURL (single assembly)
         source: |
@@ -1542,7 +1720,7 @@ paths:
             -H "Accept: application/json" | jq
           # Note: Replace `NAME` above, with the "jobId" value returned from the delete job.
       - lang: cURL
-        label: cURL (specific assembly)
+        label: cURL (multi-assembly)
         source: |
           curl -X DELETE "http://localhost:8080/api/v0/deletes/NAME?assembly=marketdata-emea" \
             -H "Accept: application/json" | jq
@@ -1697,7 +1875,7 @@ paths:
         source: |
           session.export_assembly(filename="assembly.yaml")
       - lang: Python
-        label: Python (specific assembly)
+        label: Python (multi-assembly)
         source: |
           assembly_yaml = session.export_assembly(assembly="marketdata-emea")
           print(assembly_yaml)
@@ -1708,11 +1886,11 @@ paths:
       - lang: q
         label: q (save as assembly.yaml)
         source: |
-          session.exportAssembly["assembly.yaml"]
+          session.exportAssembly[([path:"assembly.yaml"])]
       - lang: q
-        label: q (specific assembly)
+        label: q (multi-assembly)
         source: |
-          session.exportAssembly[enlist[`assembly]!enlist "marketdata-emea"]
+          session.exportAssembly[([assembly:"marketdata-emea"])]
       - lang: cURL
         label: cURL (show YAML)
         source: |
@@ -1725,7 +1903,7 @@ paths:
             -H "Accept: application/yaml" \
             -o assembly.yaml
       - lang: cURL
-        label: cURL (specific assembly)
+        label: cURL (multi-assembly)
         source: |
           curl -X GET "http://localhost:8080/api/v0/config/assembly?assembly=marketdata-emea" \
             -H "Accept: application/yaml"
@@ -1764,23 +1942,23 @@ paths:
         label: Python (single assembly)
         source: session.list_tables()
       - lang: Python
-        label: Python (specific assembly)
+        label: Python (multi-assembly)
         source: session.list_tables(assembly="marketdata-emea")
       - lang: q
         label: q (single assembly)
         source: |
           session.listTables[]
       - lang: q
-        label: q (specific assembly)
+        label: q (multi-assembly)
         source: |
-          session.listTables[enlist[`assembly]!enlist "marketdata-emea"]
+          session.listTables[([assembly:"marketdata-emea"])]
       - lang: cURL
         label: cURL (single assembly)
         source: |
           curl -s -X GET "http://localhost:8080/api/v0/tables" \
             -H "Accept: application/json" | jq
       - lang: cURL
-        label: cURL (specific assembly)
+        label: cURL (multi-assembly)
         source: |
           curl -s -X GET "http://localhost:8080/api/v0/tables?assembly=marketdata-emea" \
             -H "Accept: application/json" | jq
@@ -1937,17 +2115,17 @@ paths:
         label: q (splayed table)
         source: |
           fxquoteCols:(([name:`trddate; colType:`date]);([name:`ts; colType:`timestamp]);([name:`sym; colType:`symbol]);([name:`bid; colType:`float]);([name:`ask; colType:`float]));
-          session.createTable[([table:`fxquote; tableType:`splayed; columns:fxquoteCols])]
+          session.createTable[`fxquote;([tableType:`splayed;columns:fxquoteCols])]
       - lang: q
         label: q (partitioned minimal)
         source: |
           fxquoteCols:(([name:`trddate; colType:`date]);([name:`ts; colType:`timestamp]);([name:`sym; colType:`symbol]);([name:`bid; colType:`float]);([name:`ask; colType:`float]));
-          session.createTable[([table:`fxquote; tableType:`partitioned; prtnCol:`ts; columns:fxquoteCols])]
+          session.createTable[`fxquote;([tableType:`partitioned;prtnCol:`ts;columns:fxquoteCols])]
       - lang: q
         label: q (partitioned full)
         source: |
           fxquoteCols:(([name:`trddate; colType:`date]);([name:`ts; colType:`timestamp]);([name:`sym; colType:`symbol; attrMem:`grouped; attrDisk:`parted; attrOrd:`parted]);([name:`bid; colType:`float]);([name:`ask; colType:`float]));
-          session.createTable[([table:`fxquote; description:"FX quote data"; tableType:`partitioned; blockSize:10000; prtnCol:`ts; sortColsMem:enlist`sym; sortColsDisk:enlist`sym; sortColsOrd:enlist`sym; columns:fxquoteCols])]
+          session.createTable[`fxquote; ([description:"FX quote data"; tableType:`partitioned; blockSize:10000; prtnCol:`ts; sortColsMem:enlist`sym; sortColsDisk:enlist`sym; sortColsOrd:enlist`sym; columns:fxquoteCols])]
       - lang: cURL
         label: cURL (splayed table)
         source: |
@@ -2077,23 +2255,23 @@ paths:
         label: Python (single assembly)
         source: session.describe_table(table="fxquote")
       - lang: Python
-        label: Python (specific assembly)
+        label: Python (multi-assembly)
         source: session.describe_table(table="fxquote", assembly="marketdata-emea")
       - lang: q
         label: q (single assembly)
         source: |
           session.describeTable["fxquote"]
       - lang: q
-        label: q (specific assembly)
+        label: q (multi-assembly)
         source: |
-          session.describeTable[`table`assembly!("fxquote";"marketdata-emea")]
+          session.describeTable["fxquote";([assembly:"marketdata-emea"])]
       - lang: cURL
         label: cURL (single assembly)
         source: |
           curl -s -X GET "http://localhost:8080/api/v0/tables/fxquote" \
             -H "Accept: application/json" | jq
       - lang: cURL
-        label: cURL (specific assembly)
+        label: cURL (multi-assembly)
         source: |
           curl -s -X GET "http://localhost:8080/api/v0/tables/fxquote?assembly=marketdata-emea" \
             -H "Accept: application/json" | jq
@@ -2156,23 +2334,23 @@ paths:
         label: Python (single assembly)
         source: session.drop_table(table="instruments")
       - lang: Python
-        label: Python (specific assembly)
+        label: Python (multi-assembly)
         source: session.drop_table(table="instruments", assembly="marketdata-emea")
       - lang: q
         label: q (single assembly)
         source: |
           session.dropTable["instruments"]
       - lang: q
-        label: q (specific assembly)
+        label: q (multi-assembly)
         source: |
-          session.dropTable[`table`assembly!("instruments";"marketdata-emea")]
+          session.dropTable["instruments";([assembly:"marketdata-emea"])]
       - lang: cURL
         label: cURL (single assembly)
         source: |
           curl -s -X DELETE "http://localhost:8080/api/v0/tables/instruments" \
             -H "Accept: application/json" | jq
       - lang: cURL
-        label: cURL (specific assembly)
+        label: cURL (multi-assembly)
         source: |
           curl -s -X DELETE "http://localhost:8080/api/v0/tables/instruments?assembly=marketdata-emea" \
             -H "Accept: application/json" | jq

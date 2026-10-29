@@ -1,0 +1,52 @@
+# These three names are fixed, not release-prefixed, because other things look
+# them up literally: the dash-web nginx proxies to gui-gateway, and the shared
+# dashboard/kx/pnl.connection.json dials pnl-dashboard-shim. One dashboard stack
+# per namespace.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pnl-dashboard
+  labels:
+    {{- include "pnl-dashboard.labels" . | nindent 4 }}
+    app.kubernetes.io/component: pnl-dashboard
+spec:
+  selector:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: pnl-dashboard
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gui-gateway
+  labels:
+    {{- include "pnl-dashboard.labels" . | nindent 4 }}
+    app.kubernetes.io/component: pnl-dashboard-gw
+spec:
+  selector:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: pnl-dashboard-gw
+  ports:
+    - name: gateway
+      port: 10001
+      targetPort: gateway
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pnl-dashboard-shim
+  labels:
+    {{- include "pnl-dashboard.labels" . | nindent 4 }}
+    app.kubernetes.io/component: pnl-dashboard-shim
+spec:
+  selector:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: pnl-dashboard-shim
+  ports:
+    - name: qipc
+      port: {{ .Values.shim.port }}
+      targetPort: qipc

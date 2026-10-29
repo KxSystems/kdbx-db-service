@@ -15,9 +15,11 @@ spec:
     - name: rc-qipc
       port: {{ .Values.dbsRc.service.port }}
       targetPort: {{ .Values.dbsRc.service.port }}
+    {{- if .Values.dbsSidecar.enabled }}
     - port: 8080
       targetPort: metrics
       protocol: TCP
       name: rc-metrics
+    {{- end }}
   selector:
     {{- include "gw.rc.selectorLabels" . | nindent 4 }}
