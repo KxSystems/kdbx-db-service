@@ -1,4 +1,0 @@
-services:
-  notebook-test-runner:
-    volumes:
-      - ${DBSERVICE_PYTHON_CLIENT_DIR:?Set DBSERVICE_PYTHON_CLIENT_DIR to use a local Python client}:/workspace/.external/dbservice-python-client:ro
