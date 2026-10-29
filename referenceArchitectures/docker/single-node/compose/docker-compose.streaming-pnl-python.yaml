@@ -1,0 +1,108 @@
+services:
+  sim-marketdata:
+    container_name: sim-marketdata
+    image: sim-marketdata:${IMAGE_TAG:-local}
+    cgroup_parent: ${DS_CGROUP_PARENT:-}
+    mem_limit: ${DS_OTHER_MEM_LIMIT:-0}
+    restart: unless-stopped
+    depends_on:
+      - kx-db-rt
+    networks:
+      - kx-db
+    volumes:
+      - ./data/rt-client-md:/tmp/rt
+    environment:
+      PYKX_UNLICENSED: "true"
+      RT_HOST: kx-db-rt
+      RT_PORT: "5002"
+      RT_PUBLISH_ENDPOINTS: kx-db-rt:5002
+      RT_TOPIC: data
+      RT_DIR: /tmp/rt
+      RT_LOG_LEVEL: error
+      RT_CLIENT_NAME: dbs-mdpub
+      SIM_SYMBOLS: ${SIM_SYMBOLS:-}
+      SIM_TICKER_SUFFIX: ${SIM_TICKER_SUFFIX:-US}
+      SIM_EXCH: ${SIM_EXCH:-US}
+      SIM_CCY: ${SIM_CCY:-USD}
+      MD_TABLE: mdquote
+      MD_TICK_INTERVAL: ${MD_TICK_INTERVAL:-1.0}
+      MD_VOL_BPS: ${MD_VOL_BPS:-5}
+      MD_SPREAD_BPS: ${MD_SPREAD_BPS:-2}
+      MD_MEAN_REVERT: ${MD_MEAN_REVERT:-0.02}
+      MD_LOG_EVERY: ${MD_LOG_EVERY:-100}
+
+  sim-oms:
+    container_name: sim-oms
+    image: sim-oms:${IMAGE_TAG:-local}
+    cgroup_parent: ${DS_CGROUP_PARENT:-}
+    mem_limit: ${DS_OTHER_MEM_LIMIT:-0}
+    restart: unless-stopped
+    depends_on:
+      - kx-db-rt
+      - kx-db-gw
+    networks:
+      - kx-db
+    volumes:
+      - ./data/rt-client-oms:/tmp/rt
+    environment:
+      PYKX_UNLICENSED: "true"
+      RT_HOST: kx-db-rt
+      RT_PORT: "5002"
+      RT_PUBLISH_ENDPOINTS: kx-db-rt:5002
+      RT_TOPIC: data
+      RT_DIR: /tmp/rt
+      RT_LOG_LEVEL: error
+      RT_CLIENT_NAME: dbs-omspub
+      SIM_SYMBOLS: ${SIM_SYMBOLS:-}
+      SIM_TICKER_SUFFIX: ${SIM_TICKER_SUFFIX:-US}
+      SIM_EXCH: ${SIM_EXCH:-US}
+      SIM_CCY: ${SIM_CCY:-USD}
+      OMS_TABLE: omstrade
+      OMS_TRADES_PER_SEC: ${OMS_TRADES_PER_SEC:-3}
+      OMS_BOOKS: ${OMS_BOOKS:-ALPHA,BETA,GAMMA,DELTA,MACRO}
+      OMS_REF_SOURCE: dbservice
+      OMS_DBS_ENDPOINT: http://kx-db-gw:8080
+      OMS_REF_TABLE: mdquote
+      OMS_REF_LOOKBACK_SECS: ${OMS_REF_LOOKBACK_SECS:-60}
+      OMS_REF_LIMIT: ${OMS_REF_LIMIT:-5000}
+      OMS_REF_REFRESH_SECS: ${OMS_REF_REFRESH_SECS:-1}
+      OMS_SLIPPAGE_BPS: ${OMS_SLIPPAGE_BPS:-1}
+      OMS_LOG_EVERY: ${OMS_LOG_EVERY:-50}
+
+  sim-pnl:
+    container_name: sim-pnl
+    image: sim-pnl:${IMAGE_TAG:-local}
+    cgroup_parent: ${DS_CGROUP_PARENT:-}
+    mem_limit: ${DS_OTHER_MEM_LIMIT:-0}
+    restart: unless-stopped
+    depends_on:
+      - kx-db-rt
+    networks:
+      - kx-db
+    volumes:
+      - ./data/rt-client-pnl:/tmp/rt
+    environment:
+      PYKX_UNLICENSED: "true"
+      RT_HOST: kx-db-rt
+      RT_PORT: "5002"
+      RT_PUBLISH_ENDPOINTS: kx-db-rt:5002
+      RT_SUB_ENDPOINTS: kx-db-rt:5003
+      RT_SUB_PORT: "5003"
+      RT_REPL_PORT: "5001"
+      RT_TOPIC: data
+      RT_STREAM_ID: data
+      RT_TOPIC_PREFIX: rt-
+      RT_REPLICAS: "1"
+      RT_SUB_POSITION: "0"
+      RT_DIR: /tmp/rt
+      RT_LOG_LEVEL: error
+      PNL_PUB_CLIENT_NAME: dbs-pnlpub
+      PNL_SUB_CLIENT_NAME: dbs-pnlsub
+      PNL_TABLE: pnlstate
+      PNL_QUOTE_TABLE: mdquote
+      PNL_TRADE_TABLE: omstrade
+      PNL_KEY: ${PNL_KEY:-sym+book}
+      PNL_MARK_PRICE: ${PNL_MARK_PRICE:-mid}
+      PNL_MIN_PUBLISH_INTERVAL: ${PNL_MIN_PUBLISH_INTERVAL:-5}
+      PNL_WARMUP_LAG: ${PNL_WARMUP_LAG:-5}
+      PNL_LOG_EVERY: ${PNL_LOG_EVERY:-100}

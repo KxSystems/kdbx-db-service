@@ -88,9 +88,9 @@ This chart deploys the DB Service database components to allow a client to inges
 
 ```bash
 # Run from '.../kxCharts/db' directory
-RELEASENAME=db # Unique name for this deployment
+RELEASE_NAME=db # Unique name for this deployment
 VALUESFILE=myvalues.yaml
-helm install $RELEASENAME . -f $VALUESFILE -n $NAMESPACE
+helm install $RELEASE_NAME . -f $VALUESFILE -n $NAMESPACE
 ```
 
 ### Upgrading/updating config
@@ -98,7 +98,7 @@ helm install $RELEASENAME . -f $VALUESFILE -n $NAMESPACE
 Upgrading and updating configuration are executed using `helm upgrade`. This will deploy any changes made to the charts or configuration since the last deploy and automatically redeploy the latest to the application
 
 ```bash
-helm upgrade $RELEASENAME . -f $VALUESFILE -n $NAMESPACE
+helm upgrade $RELEASE_NAME . -f $VALUESFILE -n $NAMESPACE
 ```
 
 ## Custom Deployment Assembly
@@ -128,8 +128,10 @@ Local values configuration for `db`.
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `assembly.filename` | `string` | <code>"assembly.yaml"</code> | This defines the assembly file to be loaded into the DB Service database.<br>It should be on the base directory of the chart folder under `db`.<br>See the DB Service documentation for more information. |
+| `db.hdbt1.accessModes` | `list` | <code>["ReadWriteMany"]</code> | Persistent Volume Claim access modes for HDB storage.<br>`ReadWriteMany` is required when DB Service components can run on different nodes. |
 | `db.hdbt1.size` | `string` | <code>""</code> | Size of the HDB Tier 1 persistent storage. |
 | `db.hdbt1.storageClassName` | `string` | <code>""</code> | Defines the storageClassNames for all the persistent data storage in the DB Service database.<br>This should map to Kubernetes storageClassNames with accessMode of `RWM`.<br>More information can be found [here](https://kubernetes.io/docs/concepts/storage/storage-classes/). |
+| `db.idb.accessModes` | `list` | <code>["ReadWriteMany"]</code> | Persistent Volume Claim access modes for IDB storage.<br>`ReadWriteMany` is required when DB Service components can run on different nodes. |
 | `db.idb.size` | `string` | <code>""</code> | Size of the Intraday persistent storage. |
 | `db.idb.storageClassName` | `string` | <code>""</code> | Defines the storageClassNames for all the persistent data storage in the DB Service database.<br>This should map to Kubernetes storageClassNames with accessMode of `RWM`.<br>More information can be found [here](https://kubernetes.io/docs/concepts/storage/storage-classes/). |
 | `fullnameOverride` | `string` | <code>""</code> | This sets the full name of the DB Service database deployment.<br>Override the default fully qualified app name.<br>By default resources are named using `<.Release.Name>-<.Chart.Name>`.<br>Used when generating resource names. |
@@ -162,6 +164,7 @@ Local values configuration for `db`.
 | `dbsDa.updateStrategy` | `object` | <code>{}</code> | Define how pod updates are applied.<br>`RollingUpdate`, replace gradually; `OnDelete`, replace only on delete.<br>More information can be found [here](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies). |
 | `dbsDa.volumeMounts` | `list` | <code>[]</code> | Allows additional `volumeMounts` to be added to the DA Refer to [Volumes](https://kubernetes.io/docs/concepts/storage/volumes/). |
 | `dbsDa.volumes` | `list` | <code>[]</code> | Allows additional `volumes` to be added to the DAP.<br>Refer to [Volumes](https://kubernetes.io/docs/concepts/storage/volumes/). |
+| `dbsSidecar.enabled` | `bool` | <code>true</code> | Deploy the metrics sidecar and its supporting resources. |
 | `dbsSidecar.image` | `object` | <code>{}</code> | This sets overriding container image information.<br>Use if you wish to target specific versions of the dbsSidecar.<br>More information can be found [here](https://kubernetes.io/docs/concepts/containers/images/). |
 | `dbsSidecar.image.tag` | `string` | <code>"1.18.1"</code> | Image tag. |
 | `dbsSm.affinity` | `object` | <code>{}</code> | This is for setting Kubernetes Affinity to a Pod.<br>Refer to [Pod Affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity). |

@@ -1,0 +1,4 @@
+services:
+  notebook-test-runner:
+    volumes:
+      - ${DBSERVICE_Q_CLIENT_LOCAL_DIR:?Set DBSERVICE_Q_CLIENT_LOCAL_DIR to use a local qClient}:/workspace/.external/dbservice-qclient:ro

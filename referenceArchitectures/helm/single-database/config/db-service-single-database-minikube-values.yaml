@@ -1,0 +1,20 @@
+# Local storage overrides for running the single-database reference architecture
+# on a single-node Minikube cluster.
+db:
+  db:
+    idb:
+      storageClassName: standard
+      accessModes:
+        - ReadWriteOnce
+    hdbt1:
+      storageClassName: standard
+      accessModes:
+        - ReadWriteOnce
+
+rt:
+  externalService:
+    enabled: false
+  persistence:
+    storageClass: standard
+    accessModes:
+      - ReadWriteOnce

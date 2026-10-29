@@ -1,0 +1,188 @@
+{{- $prefix := include "pnl-dashboard.prefix" . }}
+{{- $gwEndpoint := default (printf "%s-gw-sg:5040" .Values.dbService.release) .Values.shim.gatewayEndpoint }}
+---
+# Web UI. Its nginx proxies to a host literally named gui-gateway, which the
+# gui-gateway Service in services.yaml provides.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $prefix }}
+  labels:
+    {{- include "pnl-dashboard.labels" . | nindent 4 }}
+    app.kubernetes.io/component: pnl-dashboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: pnl-dashboard
+  template:
+    metadata:
+      labels:
+        {{- include "pnl-dashboard.labels" . | nindent 8 }}
+        app.kubernetes.io/component: pnl-dashboard
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: web
+          image: "{{ .Values.webImage.repository }}:{{ .Values.webImage.tag }}"
+          imagePullPolicy: {{ .Values.webImage.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 5
+          {{- with .Values.resources.web }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+---
+# Dashboards gateway. Recreate, because the data volume is ReadWriteOnce.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $prefix }}-gw
+  labels:
+    {{- include "pnl-dashboard.labels" . | nindent 4 }}
+    app.kubernetes.io/component: pnl-dashboard-gw
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: pnl-dashboard-gw
+  template:
+    metadata:
+      labels:
+        {{- include "pnl-dashboard.labels" . | nindent 8 }}
+        app.kubernetes.io/component: pnl-dashboard-gw
+    spec:
+      # The image runs as nobody (65534), which must be able to write the volume.
+      securityContext:
+        fsGroup: 65534
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: gateway
+          image: "{{ .Values.gatewayImage.repository }}:{{ .Values.gatewayImage.tag }}"
+          imagePullPolicy: {{ .Values.gatewayImage.pullPolicy }}
+          ports:
+            - name: gateway
+              containerPort: 10001
+          readinessProbe:
+            tcpSocket:
+              port: gateway
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          {{- with .Values.resources.gateway }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: license
+              mountPath: /opt/kx/lic
+              readOnly: true
+            - name: data
+              mountPath: /opt/kx/app/data
+      volumes:
+        - name: license
+          secret:
+            secretName: {{ .Values.license.secretName }}
+            items:
+              - key: {{ .Values.license.secretKey }}
+                path: {{ .Values.license.fileName }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ $prefix }}-gw-data
+---
+# Data source. A Dashboards connection is an ordinary kdb+ client and the DB
+# Service gateway rejects plain q, so this polls it with the
+# (api;args;callback;opts) envelope and republishes pnlstate as plain tables.
+# It reuses the gateway image only for the q binary it contains; no image is
+# built for it.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $prefix }}-shim
+  labels:
+    {{- include "pnl-dashboard.labels" . | nindent 4 }}
+    app.kubernetes.io/component: pnl-dashboard-shim
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: pnl-dashboard-shim
+  template:
+    metadata:
+      labels:
+        {{- include "pnl-dashboard.labels" . | nindent 8 }}
+        app.kubernetes.io/component: pnl-dashboard-shim
+      annotations:
+        # Restart the shim when the script changes.
+        checksum/shim-script: {{ .Files.Get "files/pnl_shim.q" | sha256sum }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: shim
+          image: "{{ .Values.gatewayImage.repository }}:{{ .Values.gatewayImage.tag }}"
+          imagePullPolicy: {{ .Values.gatewayImage.pullPolicy }}
+          command:
+            - /opt/kx/l64/q
+            - /app/pnl_shim.q
+            - -p
+            - {{ .Values.shim.port | quote }}
+            - -q
+          env:
+            - name: QHOME
+              value: /opt/kx
+            - name: QLIC
+              value: /opt/kx/lic
+            - name: PNLDASH_GW
+              value: {{ $gwEndpoint | quote }}
+            - name: PNLDASH_TABLE
+              value: {{ .Values.shim.table | quote }}
+            - name: PNLDASH_SHIM_PORT
+              value: {{ .Values.shim.port | quote }}
+            - name: PNLDASH_INTERVAL
+              value: {{ .Values.shim.intervalMs | quote }}
+          ports:
+            - name: qipc
+              containerPort: {{ .Values.shim.port }}
+          readinessProbe:
+            tcpSocket:
+              port: qipc
+            periodSeconds: 5
+          {{- with .Values.resources.shim }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: license
+              mountPath: /opt/kx/lic
+              readOnly: true
+            - name: shim-script
+              mountPath: /app
+              readOnly: true
+      volumes:
+        - name: license
+          secret:
+            secretName: {{ .Values.license.secretName }}
+            items:
+              - key: {{ .Values.license.secretKey }}
+                path: {{ .Values.license.fileName }}
+        - name: shim-script
+          configMap:
+            name: {{ $prefix }}-shim-script

@@ -20,7 +20,9 @@ spec:
     metadata:
       annotations:
         checksum/log: {{ include ( print $.Template.BasePath "/sm-qlogconfigmap.yaml" ) . | sha256sum }}
+        {{- if .Values.dbsSidecar.enabled }}
         checksum/config: {{ include ( print $.Template.BasePath "/sm-sidecarconfigmap.yaml" ) . | sha256sum }}
+        {{- end }}
         checksum/assembly: {{ include ( print $.Template.BasePath "/assembly-configmap.yaml" ) . | sha256sum }}
         {{- with .Values.dbsSm.podAnnotations }}
         {{- tpl ( toYaml . ) $ | nindent 8 }}
@@ -60,8 +62,10 @@ spec:
             {{- toYaml . | nindent 12 }}
           {{- end }}
           env:
+            {{- if .Values.dbsSidecar.enabled }}
             - name: KXI_CONFIG_FILE
               value: "/opt/kx/sidecarConfig/config.json"
+            {{- end }}
             - name: KXI_LOG_CONFIG
               value: /opt/kx/config/qlog.json
             - name: KXI_NAME
@@ -94,9 +98,11 @@ spec:
             - name: tmp
               mountPath: "/tmp"
               readOnly: false
+            {{- if .Values.dbsSidecar.enabled }}
             - name: {{ include "db.fullname" . }}-sm-sidecar
               mountPath: /opt/kx/sidecarConfig/config.json
               subPath: config.json
+            {{- end }}
             - name: {{ include "db.fullname" . }}-smlog
               mountPath: /opt/kx/config
             - mountPath: /mnt/config/assembly.yaml
@@ -119,6 +125,7 @@ spec:
               name: imports
             {{- end }}
 
+        {{- if .Values.dbsSidecar.enabled }}
         - name: sidecar
           image: "{{ .Values.image.repository }}/kxi-sidecar:{{ .Values.dbsSidecar.image.tag | default .Chart.AppVersion }}"
           args: ["-p", "8085" ]
@@ -141,14 +148,17 @@ spec:
             - name: db-service-kx-license
               mountPath: /opt/kx/lic
               readOnly: true
+        {{- end }}
       restartPolicy: Always
       volumes:
         - name: tmp
           emptyDir:
             sizeLimit: 100Mi
+        {{- if .Values.dbsSidecar.enabled }}
         - name: tmp-sidecar
           emptyDir:
             sizeLimit: 100Mi
+        {{- end }}
         - name: db-service-kx-license
           secret:
             defaultMode: 420
@@ -176,9 +186,11 @@ spec:
           persistentVolumeClaim:
             claimName: {{ .Release.Name }}-imports
         {{- end }}
+        {{- if .Values.dbsSidecar.enabled }}
         - name: {{ include "db.fullname" . }}-sm-sidecar
           configMap:
             name: {{ include "db.fullname" . }}-sm-sidecar
+        {{- end }}
         - name: {{ include "db.fullname" . }}-smlog
           configMap:
             name: {{ include "db.fullname" . }}-smlog

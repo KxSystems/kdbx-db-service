@@ -258,6 +258,9 @@ affinity: {}
 # -- Default Sidecar configuration for Reliable Transport chart components
 # @default -- `{}`
 dbsSidecar:
+  # -- Deploy the metrics sidecar and its supporting resources.
+  enabled: true
+
   # -- This sets overriding container image information. Use if you wish to target specific versions of the dbsSidecar.
   # More information can be found here: https://kubernetes.io/docs/concepts/containers/images/
   # @default -- `{}`

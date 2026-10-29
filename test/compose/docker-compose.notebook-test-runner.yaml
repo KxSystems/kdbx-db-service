@@ -1,0 +1,46 @@
+services:
+  notebook-test-runner:
+    build:
+      context: .
+      dockerfile: test/notebooks/Dockerfile
+      args:
+        KDBX_IMAGE: ${KDBX_IMAGE:-dev-registry.kxi-dev.kx.com/kxi-kdbx-base:1.20.0}
+    image: ${NOTEBOOK_TEST_RUNNER_IMAGE:-db-service-notebook-test-runner:${CI_COMMIT_SHA:-local}}
+    depends_on:
+      - kx-db-rt
+      - kx-db-sm
+      - kx-db-da
+      - kx-db-rc
+      - kx-db-agg
+      - kx-db-gw
+    working_dir: /workspace
+    volumes:
+      - ./data/imports:/workspace/data/imports:ro
+    networks:
+      - kx-db
+    environment:
+      - KDB_K4LICENSE_B64
+      - KDB_LICENSE_B64
+      - DBSERVICE_Q_CLIENT_LOCAL_DIR
+      - DBSERVICE_Q_CLIENT_DIR
+      - DBSERVICE_Q_CLIENT_URL
+      - DBSERVICE_Q_CLIENT_REF
+      - DBSERVICE_PYTHON_CLIENT_DIR
+      - DBSERVICE_PYTHON_CLIENT_MODE
+      - DBSERVICE_PYTHON_CLIENT_URL
+      - DBSERVICE_PYTHON_CLIENT_REF
+      - CI_JOB_TOKEN
+      - NOTEBOOK_UNDER_TEST
+      - NOTEBOOK_TEST_SOURCE
+      - TEST_SUITE
+      - TEST_SOURCE
+      - TEST_FILTER
+      - CODE_PROFILE
+      - CODE_DBS
+      - CODE_QCLIENT
+      - CODE_PYCLIENT
+      - VERBOSE
+      - NOTEBOOK_IMPORT_STATUS_ENDPOINT=http://kx-db-gw:8080
+      - PYTHON=/tmp/dbservice-notebook-venv/bin/python
+      - VALIDATION_COMMAND
+    command: sh test/notebooks/run_notebook_tests.sh

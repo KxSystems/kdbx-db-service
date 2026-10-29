@@ -61,9 +61,9 @@ This chart deploys the DB Service gateway components to allow a client to query 
 
 ```bash
 # Run from '.../kxCharts/gw' directory
-RELEASENAME=gw # Unique name for this deployment
+RELEASE_NAME=gw # Unique name for this deployment
 VALUESFILE=myvalues.yaml
-helm install $RELEASENAME . -f $VALUESFILE -n $NAMESPACE
+helm install $RELEASE_NAME . -f $VALUESFILE -n $NAMESPACE
 ```
 
 ### Upgrading/updating config
@@ -71,7 +71,7 @@ helm install $RELEASENAME . -f $VALUESFILE -n $NAMESPACE
 Upgrading and updating configuration are executed using `helm upgrade`. This will deploy any changes made to the charts or configuration since the last deploy and automatically redeploy the latest to the application
 
 ```bash
-helm upgrade $RELEASENAME . -f $VALUESFILE -n $NAMESPACE
+helm upgrade $RELEASE_NAME . -f $VALUESFILE -n $NAMESPACE
 ```
 
 ## Configuration Options
@@ -160,6 +160,7 @@ Local values configuration for `gw`.
 | `dbsSg.volumeMounts` | `list` | <code>[]</code> | Allows additional `volumeMounts` to be added to the Service Gateway. |
 | `dbsSg.volumes` | `list` | <code>[]</code> | Allows additional `volumes` to be added to the Service Gateway. |
 | `dbsSidecar` | `object` | <code>{}</code> | Default Sidecar configuration for DB Service gateway chart components. |
+| `dbsSidecar.enabled` | `bool` | <code>true</code> | Deploy the metrics sidecar and its supporting resources. |
 | `dbsSidecar.image` | `object` | <code>{}</code> | This sets overriding container image information.<br>Use if you wish to target specific versions of the dbsSidecar.<br>More information can be found [here](https://kubernetes.io/docs/concepts/containers/images/). |
 | `dbsSidecar.image.tag` | `string` | <code>"1.18.1"</code> | Image tag. |
 | `nameOverride` | `string` | <code>""</code> | This sets the name of the DB ServiceGW deployment.<br>Overriding Chart name.<br>Used when generating resource names. |

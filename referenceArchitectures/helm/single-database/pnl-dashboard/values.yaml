@@ -1,0 +1,47 @@
+# The DB Service release this dashboard reads from. It locates that release's
+# gateway and prefixes the names of the objects created here.
+dbService:
+  release: db-service-single
+
+imagePullSecrets:
+  - name: kx-pull-secret
+
+# The licence is the secret the DB Service already uses, projected as a file.
+# q checks the filename against the licence type, so it must match the licence.
+license:
+  secretName: kx-license
+  secretKey: license
+  fileName: k4.lic
+
+webImage:
+  repository: portal.dl.kx.com/dash-web
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# The gateway tag must be latest: older tags bundle a kdb+ 4 binary, which a
+# KDB-X 5 licence cannot license.
+gatewayImage:
+  repository: portal.dl.kx.com/kxi-gui-gateway
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# Holds the gateway's connections and dashboards. It has to survive the restart
+# that install-dashboard.sh performs, so there is no emptyDir option.
+persistence:
+  storageClassName: ""
+  accessModes:
+    - ReadWriteOnce
+  size: 1Gi
+
+# pnl_shim.q comes from files/, which links to the shared streaming source.
+shim:
+  port: 5030
+  table: pnlstate
+  intervalMs: 2000
+  # Leave empty to use the DB Service gateway of dbService.release.
+  gatewayEndpoint: ""
+
+resources:
+  web: {}
+  gateway: {}
+  shim: {}

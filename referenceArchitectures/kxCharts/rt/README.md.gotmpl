@@ -60,9 +60,9 @@ This chart deploys the DB Service RT component to allow a client to ingest data 
 
 ```bash
 # Run from '.../kxCharts/rt' directory
-RELEASENAME=stream # Unique name for this deployment
+RELEASE_NAME=stream # Unique name for this deployment
 VALUESFILE=myvalues.yaml
-helm install $RELEASENAME . -f $VALUESFILE -n $NAMESPACE
+helm install $RELEASE_NAME . -f $VALUESFILE -n $NAMESPACE
 ```
 
 #### RT Streams naming conventions and discovery
@@ -98,7 +98,7 @@ Helpers within the`rt` chart will check for a prefix of `rt-` and if not present
 Upgrading and updating configuration are executed using `helm upgrade`. This will deploy any changes made to the charts or configuration since the last deploy and automatically redeploy the latest to the application
 
 ```bash
-helm upgrade $RELEASENAME . -f myvalues.yaml -n $NAMESPACE
+helm upgrade $RELEASE_NAME . -f myvalues.yaml -n $NAMESPACE
 ```
 
 ## Configuration Options

@@ -107,11 +107,11 @@ kubectl create secret generic kx-license \
 The upgrade and cleanup commands later in this README reuse these variables.
 
 ```bash
-RELEASENAME_API="db-service-api"
-RELEASENAME_EQUITIES_NASDAQ="db-service-db-equities-nasdaq"
-RELEASENAME_EQUITIES_NYSE="db-service-db-equities-nyse"
-RELEASENAME_FX_EMEA="db-service-db-fx-emea"
-RELEASENAME_FX_AMERICAS="db-service-db-fx-americas"
+RELEASE_NAME_API="db-service-api"
+RELEASE_NAME_EQUITIES_NASDAQ="db-service-db-equities-nasdaq"
+RELEASE_NAME_EQUITIES_NYSE="db-service-db-equities-nyse"
+RELEASE_NAME_FX_EMEA="db-service-db-fx-emea"
+RELEASE_NAME_FX_AMERICAS="db-service-db-fx-americas"
 
 VALUESFILE_API="./config/db-service-api-values.yaml"
 VALUESFILE_COMMON="./config/db-service-db-shard-values.yaml"
@@ -138,7 +138,7 @@ helm dependency build ./db-service-db-shard
 Review and update [db-service-api-values.yaml](config/db-service-api-values.yaml) before deployment. The `gw.dbsSg.smAddrs` entries must match the Storage Manager service names of the shard releases.
 
 ```bash
-helm install "$RELEASENAME_API" ./db-service-api \
+helm install "$RELEASE_NAME_API" ./db-service-api \
   -f "$VALUESFILE_API" \
   -n "$NAMESPACE"
 ```
@@ -146,12 +146,12 @@ helm install "$RELEASENAME_API" ./db-service-api \
 ### Deploy the equities shards
 
 ```bash
-helm install "$RELEASENAME_EQUITIES_NASDAQ" ./db-service-db-shard \
+helm install "$RELEASE_NAME_EQUITIES_NASDAQ" ./db-service-db-shard \
   -f "$VALUESFILE_COMMON" \
   -f "$VALUESFILE_EQUITIES_NASDAQ" \
   -n "$NAMESPACE"
 
-helm install "$RELEASENAME_EQUITIES_NYSE" ./db-service-db-shard \
+helm install "$RELEASE_NAME_EQUITIES_NYSE" ./db-service-db-shard \
   -f "$VALUESFILE_COMMON" \
   -f "$VALUESFILE_EQUITIES_NYSE" \
   -n "$NAMESPACE"
@@ -160,12 +160,12 @@ helm install "$RELEASENAME_EQUITIES_NYSE" ./db-service-db-shard \
 ### Deploy the FX shards
 
 ```bash
-helm install "$RELEASENAME_FX_EMEA" ./db-service-db-shard \
+helm install "$RELEASE_NAME_FX_EMEA" ./db-service-db-shard \
   -f "$VALUESFILE_COMMON" \
   -f "$VALUESFILE_FX_EMEA" \
   -n "$NAMESPACE"
 
-helm install "$RELEASENAME_FX_AMERICAS" ./db-service-db-shard \
+helm install "$RELEASE_NAME_FX_AMERICAS" ./db-service-db-shard \
   -f "$VALUESFILE_COMMON" \
   -f "$VALUESFILE_FX_AMERICAS" \
   -n "$NAMESPACE"
@@ -175,7 +175,7 @@ helm install "$RELEASENAME_FX_AMERICAS" ./db-service-db-shard \
 
 ```bash
 # Expose the shared DB Service gateway HTTP endpoint from your local shell.
-kubectl port-forward "svc/${RELEASENAME_API}-gw-sg" 8080:8080 -n "$NAMESPACE" &
+kubectl port-forward "svc/${RELEASE_NAME_API}-gw-sg" 8080:8080 -n "$NAMESPACE" &
 GW_URL="http://localhost:8080"
 ```
 
@@ -200,7 +200,7 @@ The shard assembly files already define the tables, so these imports load CSV da
 ```bash
 # Copy the sample CSV into this shard's import directory.
 kubectl cp ./samples/eq-trade-nasdaq.csv \
-  "${NAMESPACE}/${RELEASENAME_EQUITIES_NASDAQ}-db-sm-0:/imports/eq-trade-nasdaq.csv" \
+  "${NAMESPACE}/${RELEASE_NAME_EQUITIES_NASDAQ}-db-sm-0:/imports/eq-trade-nasdaq.csv" \
   -c sm
 
 # Import the staged CSV into the table defined by the assembly.
@@ -229,7 +229,7 @@ curl -s "$GW_URL/api/v0/imports/$EQ_TRADE_NASDAQ_JOB_ID?assembly=equities_nasdaq
 ```bash
 # Copy the sample CSV into this shard's import directory.
 kubectl cp ./samples/eq-trade-nyse.csv \
-  "${NAMESPACE}/${RELEASENAME_EQUITIES_NYSE}-db-sm-0:/imports/eq-trade-nyse.csv" \
+  "${NAMESPACE}/${RELEASE_NAME_EQUITIES_NYSE}-db-sm-0:/imports/eq-trade-nyse.csv" \
   -c sm
 
 # Import the staged CSV into the table defined by the assembly.
@@ -260,7 +260,7 @@ curl -s "$GW_URL/api/v0/imports/$EQ_TRADE_NYSE_JOB_ID?assembly=equities_nyse" \
 ```bash
 # Copy the sample CSV into this shard's import directory.
 kubectl cp ./samples/fx-trade-emea.csv \
-  "${NAMESPACE}/${RELEASENAME_FX_EMEA}-db-sm-0:/imports/fx-trade-emea.csv" \
+  "${NAMESPACE}/${RELEASE_NAME_FX_EMEA}-db-sm-0:/imports/fx-trade-emea.csv" \
   -c sm
 
 # Import the staged CSV into the table defined by the assembly.
@@ -289,7 +289,7 @@ curl -s "$GW_URL/api/v0/imports/$FX_TRADE_EMEA_JOB_ID?assembly=fx_emea" \
 ```bash
 # Copy the sample CSV into this shard's import directory.
 kubectl cp ./samples/fx-trade-americas.csv \
-  "${NAMESPACE}/${RELEASENAME_FX_AMERICAS}-db-sm-0:/imports/fx-trade-americas.csv" \
+  "${NAMESPACE}/${RELEASE_NAME_FX_AMERICAS}-db-sm-0:/imports/fx-trade-americas.csv" \
   -c sm
 
 # Import the staged CSV into the table defined by the assembly.
@@ -319,7 +319,7 @@ For streaming ingest, follow the DB Service [streaming ingest guide](https://cod
 If the RT service is not exposed externally, port-forward the shard you want to publish to:
 
 ```bash
-kubectl port-forward "svc/rt-${RELEASENAME_EQUITIES_NASDAQ}-0" 5002:5002 -n "$NAMESPACE" &
+kubectl port-forward "svc/rt-${RELEASE_NAME_EQUITIES_NASDAQ}-0" 5002:5002 -n "$NAMESPACE" &
 ```
 
 ## Query data
@@ -429,26 +429,26 @@ curl -s -X POST "$GW_URL/api/v0/query/simple" \
 Use `helm upgrade` with the same values files used during installation.
 
 ```bash
-helm upgrade "$RELEASENAME_API" ./db-service-api \
+helm upgrade "$RELEASE_NAME_API" ./db-service-api \
   -f "$VALUESFILE_API" \
   -n "$NAMESPACE"
 
-helm upgrade "$RELEASENAME_EQUITIES_NASDAQ" ./db-service-db-shard \
+helm upgrade "$RELEASE_NAME_EQUITIES_NASDAQ" ./db-service-db-shard \
   -f "$VALUESFILE_COMMON" \
   -f "$VALUESFILE_EQUITIES_NASDAQ" \
   -n "$NAMESPACE"
 
-helm upgrade "$RELEASENAME_EQUITIES_NYSE" ./db-service-db-shard \
+helm upgrade "$RELEASE_NAME_EQUITIES_NYSE" ./db-service-db-shard \
   -f "$VALUESFILE_COMMON" \
   -f "$VALUESFILE_EQUITIES_NYSE" \
   -n "$NAMESPACE"
 
-helm upgrade "$RELEASENAME_FX_EMEA" ./db-service-db-shard \
+helm upgrade "$RELEASE_NAME_FX_EMEA" ./db-service-db-shard \
   -f "$VALUESFILE_COMMON" \
   -f "$VALUESFILE_FX_EMEA" \
   -n "$NAMESPACE"
 
-helm upgrade "$RELEASENAME_FX_AMERICAS" ./db-service-db-shard \
+helm upgrade "$RELEASE_NAME_FX_AMERICAS" ./db-service-db-shard \
   -f "$VALUESFILE_COMMON" \
   -f "$VALUESFILE_FX_AMERICAS" \
   -n "$NAMESPACE"
@@ -459,11 +459,11 @@ helm upgrade "$RELEASENAME_FX_AMERICAS" ./db-service-db-shard \
 Delete the deployed Helm releases:
 
 ```bash
-helm delete "$RELEASENAME_API" -n "$NAMESPACE"
-helm delete "$RELEASENAME_EQUITIES_NASDAQ" -n "$NAMESPACE"
-helm delete "$RELEASENAME_EQUITIES_NYSE" -n "$NAMESPACE"
-helm delete "$RELEASENAME_FX_EMEA" -n "$NAMESPACE"
-helm delete "$RELEASENAME_FX_AMERICAS" -n "$NAMESPACE"
+helm delete "$RELEASE_NAME_API" -n "$NAMESPACE"
+helm delete "$RELEASE_NAME_EQUITIES_NASDAQ" -n "$NAMESPACE"
+helm delete "$RELEASE_NAME_EQUITIES_NYSE" -n "$NAMESPACE"
+helm delete "$RELEASE_NAME_FX_EMEA" -n "$NAMESPACE"
+helm delete "$RELEASE_NAME_FX_AMERICAS" -n "$NAMESPACE"
 ```
 
 If you created the import PVCs, delete them when they are no longer needed:

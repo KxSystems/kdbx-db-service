@@ -14,4 +14,4 @@ bash_kernel
 # dbservice-client
 kdbx-db-service-client
 # PyKX package
-pykx>=4.0.0b5
+pykx==4.1.0

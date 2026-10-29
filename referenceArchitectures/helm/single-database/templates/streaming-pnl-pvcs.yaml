@@ -1,0 +1,22 @@
+{{- if and .Values.streamingPnl.enabled .Values.streamingPnl.persistence.enabled }}
+{{- range $name, $workload := .Values.streamingPnl.workloads }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ printf "%s-sim-%s-rt-log" $.Release.Name $name | trunc 63 | trimSuffix "-" }}
+  labels:
+    {{- include "db-service-single-database.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ printf "sim-%s" $name }}
+    app.kubernetes.io/part-of: streaming-pnl
+spec:
+  accessModes:
+    {{- toYaml $.Values.streamingPnl.persistence.accessModes | nindent 4 }}
+  {{- with $.Values.streamingPnl.persistence.storageClassName }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ $.Values.streamingPnl.persistence.size }}
+{{- end }}
+{{- end }}

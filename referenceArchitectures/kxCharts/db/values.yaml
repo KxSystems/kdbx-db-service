@@ -87,6 +87,11 @@ db:
     storageClassName: ""
     # storageClassName: "sharedfiles"
 
+    # -- Persistent Volume Claim access modes for IDB storage.
+    # ReadWriteMany is required when DB Service components can run on different nodes.
+    accessModes:
+      - ReadWriteMany
+
     # -- Size of the Intraday persistent storage.
     size: ""
     # size: "20Gi"
@@ -99,6 +104,11 @@ db:
     # More information can be found here: https://kubernetes.io/docs/concepts/storage/storage-classes/
     storageClassName: ""
     # storageClassName: "sharedfiles"
+
+    # -- Persistent Volume Claim access modes for HDB storage.
+    # ReadWriteMany is required when DB Service components can run on different nodes.
+    accessModes:
+      - ReadWriteMany
 
     # -- Size of the HDB Tier 1 persistent storage.
     size: ""
@@ -117,6 +127,10 @@ db:
     # This should map to a Kubernetes storageClassName with accessMode of `RWM`.
     storageClassName: ""
     # storageClassName: "sharedfiles"
+
+    # -- Persistent Volume Claim access modes for file import staging storage.
+    accessModes:
+      - ReadWriteMany
 
     # -- Size of the import staging storage.
     size: ""
@@ -387,6 +401,9 @@ dbsSm:
 # Default Sidecar configuration for DB Service chart components
 # @default -- `{}`
 dbsSidecar:
+  # -- Deploy the metrics sidecar and its supporting resources.
+  enabled: true
+
   # -- This sets overriding container image information. Use if you wish to target specific versions of the dbsSidecar.
   # More information can be found here: https://kubernetes.io/docs/concepts/containers/images/
   # @default -- `{}`

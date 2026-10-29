@@ -1,0 +1,10 @@
+{
+  "name": "pnl",
+  "dbtype": "q",
+  "tls": "off",
+  "host": "pnl-dashboard-shim",
+  "port": "5030",
+  "user": "",
+  "pass": "",
+  "database": ""
+}

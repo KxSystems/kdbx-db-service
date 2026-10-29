@@ -1,5 +1,5 @@
 name: DB Service
-description: Example DB Service ingest-persist deployment configuration
+description: Example DB Service single-database deployment configuration
 labels:
   region: us
 

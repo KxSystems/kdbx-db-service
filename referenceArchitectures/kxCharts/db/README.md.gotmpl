@@ -88,9 +88,9 @@ This chart deploys the DB Service database components to allow a client to inges
 
 ```bash
 # Run from '.../kxCharts/db' directory
-RELEASENAME=db # Unique name for this deployment
+RELEASE_NAME=db # Unique name for this deployment
 VALUESFILE=myvalues.yaml
-helm install $RELEASENAME . -f $VALUESFILE -n $NAMESPACE
+helm install $RELEASE_NAME . -f $VALUESFILE -n $NAMESPACE
 ```
 
 ### Upgrading/updating config
@@ -98,7 +98,7 @@ helm install $RELEASENAME . -f $VALUESFILE -n $NAMESPACE
 Upgrading and updating configuration are executed using `helm upgrade`. This will deploy any changes made to the charts or configuration since the last deploy and automatically redeploy the latest to the application
 
 ```bash
-helm upgrade $RELEASENAME . -f $VALUESFILE -n $NAMESPACE
+helm upgrade $RELEASE_NAME . -f $VALUESFILE -n $NAMESPACE
 ```
 
 ## Custom Deployment Assembly

@@ -1,3 +1,4 @@
+{{- if .Values.dbsSidecar.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -27,3 +28,4 @@ spec:
       targetPort: 8083
   selector:
     {{- include "db.da.selectorLabels" . | nindent 4 }}
+{{- end }}

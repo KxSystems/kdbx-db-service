@@ -1,0 +1,85 @@
+services:
+  pnl-dashboard-license-init:
+    image: alpine:3.20
+    user: "0:0"
+    restart: "no"
+    environment:
+      KDB_LICENSE_B64: ${KDB_LICENSE_B64:-}
+      KDB_K4LICENSE_B64: ${KDB_K4LICENSE_B64:-}
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        rm -f /license/*.lic
+        if [ -n "$${KDB_K4LICENSE_B64}" ]; then
+          printf '%s' "$${KDB_K4LICENSE_B64}" | base64 -d > /license/k4.lic
+          license=/license/k4.lic
+        elif [ -n "$${KDB_LICENSE_B64}" ]; then
+          printf '%s' "$${KDB_LICENSE_B64}" | base64 -d > /license/kc.lic
+          license=/license/kc.lic
+        else
+          echo "Set KDB_LICENSE_B64 or KDB_K4LICENSE_B64 in the root .env file." >&2
+          exit 1
+        fi
+        chown 65534:65534 "$${license}"
+        chmod 400 "$${license}"
+    volumes:
+      - pnl-dashboard-license:/license
+
+  pnl-dashboard:
+    container_name: pnl-dashboard
+    image: portal.dl.kx.com/dash-web:${PNLDASH_WEB_TAG:-latest}
+    restart: unless-stopped
+    depends_on:
+      - pnl-dashboard-gw
+    networks:
+      - kx-db
+    ports:
+      - ${DS_PORT_PNLDASH:-9090}:8080
+
+  pnl-dashboard-gw:
+    container_name: pnl-dashboard-gw
+    image: portal.dl.kx.com/kxi-gui-gateway:${PNLDASH_GW_TAG:-latest}
+    restart: unless-stopped
+    depends_on:
+      pnl-dashboard-license-init:
+        condition: service_completed_successfully
+    networks:
+      kx-db:
+        aliases:
+          - gui-gateway
+    ports:
+      - ${DS_PORT_PNLDASH_GW:-10001}:10001
+    volumes:
+      - pnl-dashboard-data:/opt/kx/app/data
+      - pnl-dashboard-license:/opt/kx/lic:ro
+
+  pnl-dashboard-shim:
+    container_name: pnl-dashboard-shim
+    image: portal.dl.kx.com/kxi-gui-gateway:${PNLDASH_GW_TAG:-latest}
+    entrypoint: ["/opt/kx/l64/q"]
+    command: ["/app/pnl_shim.q", "-p", "5030", "-q"]
+    restart: unless-stopped
+    depends_on:
+      pnl-dashboard-license-init:
+        condition: service_completed_successfully
+      kx-db-gw:
+        condition: service_started
+    networks:
+      - kx-db
+    ports:
+      - ${DS_PORT_PNLSHIM:-5030}:5030
+    volumes:
+      - pnl-dashboard-license:/opt/kx/lic:ro
+      - ./referenceArchitectures/workflows/streaming-pnl/dashboard/pnl_shim.q:/app/pnl_shim.q:ro
+    environment:
+      QHOME: /opt/kx
+      QLIC: /opt/kx/lic
+      PNLDASH_GW: kx-db-gw:5040
+      PNLDASH_TABLE: pnlstate
+      PNLDASH_SHIM_PORT: "5030"
+      PNLDASH_INTERVAL: ${PNLDASH_INTERVAL:-2000}
+
+volumes:
+  pnl-dashboard-data:
+  pnl-dashboard-license:

@@ -1,0 +1,159 @@
+{{- if .Values.streamingPnl.enabled }}
+{{- $implementation := lower (default "python" .Values.streamingPnl.implementation) }}
+{{- if not (has $implementation (list "python" "q")) }}
+{{- fail (printf "streamingPnl.implementation must be either python or q, got %q" $implementation) }}
+{{- end }}
+{{- $isQ := eq $implementation "q" }}
+{{- $publishEndpoints := list }}
+{{- $subscribeEndpoints := list }}
+{{- $imageRegistry := trimSuffix "/" .Values.streamingPnl.imageRegistry }}
+{{- $qImageRepository := default "sim-streaming-pnl-q" .Values.streamingPnl.q.image.repository }}
+{{- $qImageTag := default .Values.streamingPnl.imageTag .Values.streamingPnl.q.image.tag }}
+{{- $qImagePullPolicy := default "IfNotPresent" .Values.streamingPnl.q.image.pullPolicy }}
+{{- $qLicenseName := default "kc.lic" .Values.db.kxLicenseName }}
+{{- range $index := until (.Values.rt.replicaCount | int) }}
+{{- $publishEndpoints = append $publishEndpoints (printf "rt-%s-%d:5002" $.Release.Name $index) }}
+{{- $subscribeEndpoints = append $subscribeEndpoints (printf "rt-%s-%d:5003" $.Release.Name $index) }}
+{{- end }}
+{{- range $name, $workload := .Values.streamingPnl.workloads }}
+{{- $subscribes := or $workload.subscribe (and $isQ $workload.qSubscribe) }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ printf "%s-sim-%s" $.Release.Name $name | trunc 63 | trimSuffix "-" }}
+  labels:
+    {{- include "db-service-single-database.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ printf "sim-%s" $name }}
+    app.kubernetes.io/part-of: streaming-pnl
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ $.Release.Name }}
+      app.kubernetes.io/component: {{ printf "sim-%s" $name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: {{ $.Release.Name }}
+        app.kubernetes.io/component: {{ printf "sim-%s" $name }}
+        app.kubernetes.io/part-of: streaming-pnl
+    spec:
+      {{- if $isQ }}
+      {{- with $.Values.db.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- end }}
+      {{- with $.Values.streamingPnl.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ printf "sim-%s" $name }}
+          {{- if $isQ }}
+          {{- with $.Values.db.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          image: "{{ if $imageRegistry }}{{ $imageRegistry }}/{{ end }}{{ $qImageRepository }}:{{ $qImageTag }}"
+          imagePullPolicy: {{ $qImagePullPolicy }}
+          command:
+            - /opt/kx/l64/q
+          args:
+            - {{ printf "/app/q/%s.q" $name | quote }}
+            - -q
+          {{- else }}
+          image: "{{ if $imageRegistry }}{{ $imageRegistry }}/{{ end }}{{ $workload.image.repository }}:{{ $.Values.streamingPnl.imageTag }}"
+          imagePullPolicy: {{ $workload.image.pullPolicy }}
+          {{- end }}
+          env:
+            {{- if $isQ }}
+            - name: QHOME
+              value: /opt/kx
+            - name: QLIC
+              value: /opt/kx/lic
+            - name: RT_QPK_DIR
+              value: {{ $.Values.streamingPnl.q.rtQpkDir | quote }}
+            - name: SIM_Q_DIR
+              value: /app/q
+            - name: RT_LOG_PATH
+              value: /tmp/rt
+            - name: RT_LOGLEVEL_CONSOLE
+              value: {{ upper $.Values.streamingPnl.rt.logLevel | quote }}
+            - name: RT_LOGFORMAT_CONSOLE
+              value: txt
+            {{- else }}
+            - name: PYKX_UNLICENSED
+              value: "true"
+            - name: RT_LOG_LEVEL
+              value: {{ $.Values.streamingPnl.rt.logLevel | quote }}
+            {{- end }}
+            - name: RT_PUBLISH_ENDPOINTS
+              value: {{ join "," $publishEndpoints | quote }}
+            - name: RT_TOPIC
+              value: {{ $.Release.Name | quote }}
+            - name: RT_DIR
+              value: /tmp/rt
+            - name: SIM_SYMBOLS
+              value: {{ $.Values.streamingPnl.simulation.symbols | quote }}
+            - name: SIM_TICKER_SUFFIX
+              value: {{ $.Values.streamingPnl.simulation.tickerSuffix | quote }}
+            - name: SIM_EXCH
+              value: {{ $.Values.streamingPnl.simulation.exchange | quote }}
+            - name: SIM_CCY
+              value: {{ $.Values.streamingPnl.simulation.currency | quote }}
+            {{- if $subscribes }}
+            - name: RT_SUB_ENDPOINTS
+              value: {{ join "," $subscribeEndpoints | quote }}
+            - name: RT_SUB_PORT
+              value: "5003"
+            - name: RT_REPL_PORT
+              value: "5001"
+            - name: RT_STREAM_ID
+              value: {{ $.Release.Name | quote }}
+            {{- if $isQ }}
+            - name: RT_SOURCE
+              value: {{ $.Release.Name | quote }}
+            {{- end }}
+            - name: RT_TOPIC_PREFIX
+              value: "rt-"
+            - name: RT_REPLICAS
+              value: {{ $.Values.rt.replicaCount | quote }}
+            {{- end }}
+            {{- with $workload.env }}
+            {{- tpl (toYaml .) $ | nindent 12 }}
+            {{- end }}
+          {{- with $workload.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: rt-log
+              mountPath: /tmp/rt
+            {{- if $isQ }}
+            - name: kx-license
+              mountPath: /opt/kx/lic
+              readOnly: true
+            {{- end }}
+      volumes:
+        - name: rt-log
+          {{- if $.Values.streamingPnl.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ printf "%s-sim-%s-rt-log" $.Release.Name $name | trunc 63 | trimSuffix "-" }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        {{- if $isQ }}
+        - name: kx-license
+          secret:
+            secretName: kx-license
+            optional: false
+            items:
+              - key: license
+                path: {{ $qLicenseName | quote }}
+        {{- end }}
+{{- end }}
+{{- end }}

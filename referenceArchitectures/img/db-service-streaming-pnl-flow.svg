@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1394" height="858" viewBox="0 0 1394 858">
+  <defs>
+    <marker id="green-arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L12,6 L0,12 Z" fill="#56b34f"/>
+    </marker>
+    <marker id="black-arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L9,4.5 L0,9 Z" fill="#555555"/>
+    </marker>
+    <style>
+      .title { font: 700 28px Arial, sans-serif; fill: #202020; }
+      .zone-title { font: 700 28px Arial, sans-serif; fill: #202020; }
+      .node-title { font: 700 27px Arial, sans-serif; fill: #202020; }
+      .node-subtitle { font: 22px Arial, sans-serif; fill: #404040; }
+      .label { font: 22px Arial, sans-serif; fill: #404040; }
+      .data-line { fill: none; stroke: #56b34f; stroke-width: 4; marker-end: url(#green-arrow); }
+      .query-line { fill: none; stroke: #555555; stroke-width: 2.5; marker-end: url(#black-arrow); }
+    </style>
+  </defs>
+
+  <rect width="1394" height="858" fill="#ffffff"/>
+  <rect x="32" y="32" width="1330" height="793" rx="30" fill="#fafafa" stroke="#6a6a6a" stroke-width="2"/>
+  <text x="697" y="88" text-anchor="middle" class="title">DB Service streaming P&amp;L workflow</text>
+
+  <rect x="88" y="193" width="417" height="600" rx="25" fill="#eeeeee" stroke="#888888" stroke-width="2"/>
+  <text x="296" y="249" text-anchor="middle" class="zone-title">Streaming workloads</text>
+
+  <rect x="660" y="193" width="202" height="600" rx="25" fill="#e1efdc" stroke="#71b45c" stroke-width="2"/>
+  <text x="761" y="249" text-anchor="middle" class="zone-title">RT</text>
+
+  <rect x="1016" y="193" width="322" height="600" rx="25" fill="#fff3c9" stroke="#e0ae31" stroke-width="2"/>
+  <text x="1177" y="249" text-anchor="middle" class="zone-title">DB Service DB</text>
+
+  <rect x="112" y="280" width="370" height="113" rx="14" fill="#ffffff" stroke="#202020" stroke-width="3"/>
+  <text x="297" y="330" text-anchor="middle" class="node-title">Market-data simulator</text>
+  <text x="297" y="367" text-anchor="middle" class="node-subtitle">Python or q</text>
+
+  <rect x="112" y="449" width="370" height="113" rx="14" fill="#ffffff" stroke="#202020" stroke-width="3"/>
+  <text x="297" y="499" text-anchor="middle" class="node-title">OMS simulator</text>
+  <text x="297" y="536" text-anchor="middle" class="node-subtitle">Python or q</text>
+
+  <rect x="112" y="617" width="370" height="113" rx="14" fill="#ffffff" stroke="#202020" stroke-width="3"/>
+  <text x="297" y="667" text-anchor="middle" class="node-title">P&amp;L simulator</text>
+  <text x="297" y="704" text-anchor="middle" class="node-subtitle">Python or q</text>
+
+  <rect x="680" y="280" width="162" height="449" rx="14" fill="#ffffff" stroke="#202020" stroke-width="3"/>
+  <text x="761" y="496" text-anchor="middle" class="node-title">rt-data</text>
+  <text x="761" y="533" text-anchor="middle" class="node-subtitle">&lt;q :5002&gt;</text>
+
+  <rect x="1047" y="280" width="260" height="113" rx="14" fill="#ffffff" stroke="#202020" stroke-width="3"/>
+  <text x="1177" y="330" text-anchor="middle" class="node-title">mdquote</text>
+  <text x="1177" y="367" text-anchor="middle" class="node-subtitle">live prices</text>
+
+  <rect x="1047" y="449" width="260" height="113" rx="14" fill="#ffffff" stroke="#202020" stroke-width="3"/>
+  <text x="1177" y="499" text-anchor="middle" class="node-title">omstrade</text>
+  <text x="1177" y="536" text-anchor="middle" class="node-subtitle">simulated trades</text>
+
+  <rect x="1047" y="617" width="260" height="113" rx="14" fill="#ffffff" stroke="#202020" stroke-width="3"/>
+  <text x="1177" y="667" text-anchor="middle" class="node-title">pnlstate</text>
+  <text x="1177" y="704" text-anchor="middle" class="node-subtitle">calculated P&amp;L</text>
+
+  <path d="M482 337 H680" class="data-line"/>
+  <text x="550" y="327" class="label">prices</text>
+
+  <path d="M842 337 H1047" class="data-line"/>
+  <text x="910" y="327" class="label">prices</text>
+
+  <path d="M482 505 H680" class="data-line"/>
+  <text x="550" y="495" class="label">trades</text>
+
+  <path d="M842 505 H1047" class="data-line"/>
+  <text x="910" y="495" class="label">trades</text>
+
+  <path d="M680 645 H482" class="data-line"/>
+  <text x="519" y="635" class="label">prices + trades</text>
+
+  <path d="M482 697 H680" class="data-line"/>
+  <text x="515" y="727" class="label">P&amp;L updates</text>
+
+  <path d="M842 673 H1047" class="data-line"/>
+  <text x="918" y="663" class="label">P&amp;L</text>
+
+  <path d="M1293 280 V132 H58 V505 H112" class="query-line"/>
+  <text x="697" y="175" text-anchor="middle" class="label">current prices through DB Service API</text>
+</svg>

@@ -1,0 +1,4 @@
+nbclient
+nbformat
+ipykernel
+-r ../../notebooks/requirements.txt

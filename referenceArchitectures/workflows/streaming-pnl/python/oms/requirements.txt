@@ -1,0 +1,8 @@
+-r ../common/requirements.txt
+
+# sim_oms ONLY. The repo's own DB Service client, used to read live quote
+# prices back from the gateway (RT is write-only for a publisher, so current
+# state cannot be queried out of RT itself). Needs pykx>=4.0, which kxi-rtpy
+# already satisfies (4.1.0), so this adds no pykx upgrade and cannot break
+# rtpy's compiled extension.
+kdbx_db_service_client
