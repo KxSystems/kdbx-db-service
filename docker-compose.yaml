@@ -7,8 +7,9 @@ services:
 
   kx-db-rt:
     container_name: kx-db-rt
+    restart: unless-stopped
     cgroup_parent: ${DS_CGROUP_PARENT:-}
-    mem_limit: ${DS_OTHER_MEM_LIMIT:-0}
+    mem_limit: ${DS_RT_MEM_LIMIT:-0}
     tty: true
     stdin_open: true
     ports:
@@ -29,6 +30,7 @@ services:
 
   kx-db-sm:
     container_name: kx-db-sm
+    restart: unless-stopped
     cgroup_parent: ${DS_CGROUP_PARENT:-}
     mem_limit: ${DS_SM_MEM_LIMIT:-0}
     tty: true
@@ -59,12 +61,13 @@ services:
 
   kx-db-da:
     container_name: kx-db-da
+    restart: unless-stopped
     cgroup_parent: ${DS_CGROUP_PARENT:-}
     mem_limit: ${DS_DA_MEM_LIMIT:-0}
     tty: true
     stdin_open: true
     volumes:
-      - ./data/db:/db
+      - ./data/db:/db:ro
       - ./data/logs:/logs
       - ./code:/code:ro
     networks:
@@ -91,8 +94,9 @@ services:
 
   kx-db-rc:
     container_name: kx-db-rc
+    restart: unless-stopped
     cgroup_parent: ${DS_CGROUP_PARENT:-}
-    mem_limit: ${DS_OTHER_MEM_LIMIT:-0}
+    mem_limit: ${DS_RC_MEM_LIMIT:-0}
     tty: true
     stdin_open: true
     networks:
@@ -112,8 +116,9 @@ services:
 
   kx-db-agg:
     container_name: kx-db-agg
+    restart: unless-stopped
     cgroup_parent: ${DS_CGROUP_PARENT:-}
-    mem_limit: ${DS_OTHER_MEM_LIMIT:-0}
+    mem_limit: ${DS_AGG_MEM_LIMIT:-0}
     tty: true
     stdin_open: true
     volumes:
@@ -137,8 +142,7 @@ services:
 
   kx-db-gw:
     container_name: kx-db-gw
-    cgroup_parent: ${DS_CGROUP_PARENT:-}
-    mem_limit: ${DS_OTHER_MEM_LIMIT:-0}
+    restart: unless-stopped
     tty: true
     stdin_open: true
     ports:

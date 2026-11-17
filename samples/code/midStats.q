@@ -29,7 +29,7 @@ midStatsQuery:{[table;startTS;endTS]
 
   // Functional select: count rows + sum of mid (0.5*(bid+ask)) grouped by sym.
   // 0! unkeys so the per-tier partials concatenate cleanly in the aggregation.
-  0!?[t;();([sym:`sym]);([n:(count;`i);midSum:(sum;(0.5*;(+;`bid;`ask))])]
+  0!?[t;();([sym:`sym]);([n:(count;`i);midSum:(sum;(*;0.5;(+;`bid;`ask)))])]
   }
 
 // Aggregation - runs on the Aggregator. Receives the per-DAP partials as a LIST

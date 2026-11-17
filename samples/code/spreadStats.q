@@ -29,7 +29,7 @@ spreadStatsQuery:{[table;startTS;endTS]
 
   // Functional select: count rows + sum bid/ask grouped by sym. 0! unkeys the
   // result so the per-tier partials concatenate cleanly in the aggregation.
-  0!?[t;();([sym:`sym]);(n:(count;`i);bidSum:(sum;`bid);askSum:(sum;`ask))]
+  0!?[t;();([sym:`sym]);([n:(count;`i);bidSum:(sum;`bid);askSum:(sum;`ask)])]
   }
 
 // Aggregation - runs on the Aggregator. Receives the per-DAP partials as a LIST
