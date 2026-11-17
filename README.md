@@ -18,9 +18,9 @@ Before starting the DB Service, you must have your local environment ready. Ensu
 
 ## Configuring usage restrictions
 
-DB Service is configured by default to enforce the [usage restrictions](https://code.kx.com/insights/licensing/usage-restrictions.html) of the KDB-X Community Edition license. If you are not using Community Edition you should edit `.env` and delete the indicated variables (`DS_SM_MEM_LIMIT`, `DS_DA_MEM_LIMIT` and `DS_OTHER_MEM_LIMIT`) to disable the restrictions.
+DB Service is configured by default to enforce the [usage restrictions](https://code.kx.com/insights/licensing/usage-restrictions.html) of the KDB-X Community Edition license. If you are not using Community Edition you should edit `.env` and delete the indicated variables (`DS_SM_MEM_LIMIT`, `DS_DA_MEM_LIMIT`, `DS_AGG_MEM_LIMIT`, `DS_RT_MEM_LIMIT`, `DS_RC_MEM_LIMIT` and `DS_OTHER_MEM_LIMIT`) to disable the restrictions.
 
-If you are using Community Edition you are permitted to edit these restrictions so long as you remain within the 16GB total limit. If you are running on a typical Linux system, the [systemd slice](#using-systemd-slices-for-community-edition-usage-limits) approach outlined below is more flexible.
+If you are using Community Edition you are permitted to edit these restrictions so long as the q processes remain within the 16GB total limit. The Service Gateway is a Java process and is not counted. If you are running on a typical Linux system, the [systemd slice](#using-systemd-slices-for-community-edition-usage-limits) approach outlined below is more flexible.
 
 ## Starting the DB Service
 
@@ -214,7 +214,7 @@ curl -s -X POST "http://localhost:8080/api/v0/query/q" \
 
 ## Using systemd slices for Community Edition usage limits
 
-If you have root access and are on a systemd-based Linux system you can use its slices functionality to restrict the total memory usage of the whole service rather than the default approach of configuring individual limits. To enable it, run:
+If you have root access and are on a systemd-based Linux system you can use its slices functionality to restrict the total memory usage of the service's q processes rather than the default approach of configuring individual limits. To enable it, run:
 
 ```bash
 sudo cp kx-db-service.slice /etc/systemd/system/
